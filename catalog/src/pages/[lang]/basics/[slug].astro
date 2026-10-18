@@ -1,0 +1,32 @@
+---
+import { locales, type Locale } from '../../../i18n/ui';
+import { useTranslations } from '../../../i18n/utils';
+import Base from '../../../layouts/Base.astro';
+import { renderToolPage } from '../../../lib/tool-page';
+import { basicSlugs, basicSource } from '../../../lib/basics';
+import '../../../styles/tool-page.css';
+
+// The basics: short how-tos for small troubles, one page per topic, in three
+// locales. Content lives in src/content/basics/{slug}.{lang}.md and renders
+// through lib/tool-page, like the tool guides.
+export function getStaticPaths() {
+  return locales.flatMap((lang) => basicSlugs.map((slug) => ({ params: { lang, slug } })));
+}
+
+const lang = Astro.params.lang as Locale;
+const slug = Astro.params.slug as string;
+const t = useTranslations(lang);
+
+const page = renderToolPage(basicSource(slug, lang), t('basics.heading'));
+---
+
+<Base lang={lang} title={`${page.title} — atfedi.de`} description={page.tagline}>
+  <div class="tool-page-grid" style="--color-lane: var(--color-use)">
+    <article class="tool-page" set:html={page.html} />
+    {
+      page.toc && (
+        <nav class="toc" aria-label={t('toc.label')} set:html={page.toc} />
+      )
+    }
+  </div>
+</Base>

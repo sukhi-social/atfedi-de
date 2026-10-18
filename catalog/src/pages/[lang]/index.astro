@@ -3,6 +3,7 @@ import { locales, type Locale } from '../../i18n/ui';
 import { useTranslations } from '../../i18n/utils';
 import Base from '../../layouts/Base.astro';
 import Phrase from '../../components/Phrase.astro';
+import { basicSlugs, basicCard } from '../../lib/basics';
 
 export function getStaticPaths() {
   return locales.map((lang) => ({ params: { lang } }));
@@ -22,6 +23,24 @@ const t = useTranslations(lang);
     <section class="prose stack">
       <h2 class="section-title">{t('intro.heading')}</h2>
       <p><Phrase text={t('intro.body')} lang={lang} /></p>
+    </section>
+
+    <section class="section stack">
+      <h2 class="section-title">{t('basics.heading')}</h2>
+      <p class="note"><Phrase text={t('basics.lead')} lang={lang} /></p>
+      <div class="doors">
+        {
+          basicSlugs.map((slug) => {
+            const card = basicCard(slug, lang);
+            return (
+              <a class="lane-door" data-lane="use" href={`/basics/${slug}/`}>
+                <h3>{card.title}</h3>
+                <p><Phrase text={card.lead} lang={lang} /></p>
+              </a>
+            );
+          })
+        }
+      </div>
     </section>
 
     <section class="section stack">
