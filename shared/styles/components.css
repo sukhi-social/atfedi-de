@@ -113,6 +113,10 @@
   max-width: none;
 }
 
+.footer-inner .footer-contact {
+  margin-top: var(--space-2);
+}
+
 /* ---- hero + sections ---- */
 .hero {
   padding-block: var(--space-12) var(--space-8);
