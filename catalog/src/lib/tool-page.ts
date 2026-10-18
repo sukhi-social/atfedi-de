@@ -179,7 +179,8 @@ export const renderToolPage = (markdown: string, kicker: string, iconMap: IconMa
     fences.push(renderFence(type, md));
     return `%%FENCE${fences.length - 1}%%`;
   });
-  let html = micromark(body);
+  // pictures (![alt](/media/…), uploaded from the desk) load as you scroll
+  let html = micromark(body).replace(/<img /g, '<img loading="lazy" decoding="async" ');
   const hero = heroize(html, kicker);
   html = injectIcons(hero.html);
   html = html.replace(/<p>%%FENCE(\d+)%%<\/p>/g, (_, i) => fences[+i]);

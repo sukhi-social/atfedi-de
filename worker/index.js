@@ -4,6 +4,7 @@
 //   {locale}.atfedi.de  → the catalog's {locale} subtree (static assets)
 //   blog.atfedi.de      → the blog (static assets)
 //   translate.atfedi.de → translate long-form pages paragraph by paragraph
+//   write.atfedi.de     → the same desk, for rewriting a page in your own words
 //   console.atfedi.de   → the back room: publishing, and kiosk's hand tagging
 //                         (the one host behind a login — see console/index.js)
 //   atfedi.de           → detect the browser language and redirect to a
@@ -37,6 +38,7 @@ import { handleYumEditor } from './yum/editor.js';
 import { handleDash } from './dash/index.js';
 import { handleTranslate } from './translate/index.js';
 import { serveDocPage, serveHome, serveSitemap } from './content/pages.js';
+import { serveMedia } from './content/store.js';
 import { serveBlogPage } from './blog/live.js';
 
 const LOCALES = ['en', 'ja', 'ko'];
@@ -121,6 +123,10 @@ export default {
     // --- {locale}.atfedi.de: serve the catalog ---
     if (LOCALES.includes(sub)) {
       let path = url.pathname;
+      // pictures in the long-form pages, from atfedi-content via R2
+      if (path.startsWith('/media/')) {
+        return (await serveMedia(env, path.slice(7))) ?? new Response('Not found', { status: 404 });
+      }
       const isSharedAsset =
         path.startsWith('/_astro/') || path === '/favicon.svg';
 
@@ -240,10 +246,10 @@ export default {
       return handleDash(request, env, ctx);
     }
 
-    // --- translate.atfedi.de: translate the long-form pages, paragraph by
-    // paragraph. Open to any fediverse account (see translate/auth.js).
-    if (host === 'translate.atfedi.de') {
-      return handleTranslate(request, env);
+    // --- translate.atfedi.de / write.atfedi.de: the long-form desk, paragraph
+    // by paragraph. Open to any fediverse account (see translate/auth.js).
+    if (host === 'translate.atfedi.de' || host === 'write.atfedi.de') {
+      return handleTranslate(request, env, ctx);
     }
 
     // --- blog.atfedi.de: serve the blog (path-based locales) ---

@@ -212,3 +212,17 @@
     display: none;
   }
 }
+
+/* who wrote the page (filled in by the Worker from atfedi-content's history) */
+.tool-page .doc-credits {
+  margin-top: var(--space-6);
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.tool-page img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-2, 8px);
+}

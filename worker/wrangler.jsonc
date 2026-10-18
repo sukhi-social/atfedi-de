@@ -29,8 +29,14 @@
   ],
   // Where publishing verifies a writer's identity (sukhi's Mastodon-compatible
   // OAuth2). Public, not a secret.
+  // WRITE_PUBLISHERS: who the desk publishes straight to atfedi-content's main
+  // (comma-separated handles). Anyone else's "Send" opens a pull request.
+  // The desk commits with the secret CONTENT_GITHUB_TOKEN: a fine-grained
+  // token for atfedi-content only, with Contents and Pull requests write.
   "vars": {
-    "SUKHI_BASE_URL": "https://sukhi.f3liz.casa"
+    "SUKHI_BASE_URL": "https://sukhi.f3liz.casa",
+    "CONTENT_REPO": "sukhi-social/atfedi-content",
+    "WRITE_PUBLISHERS": "@kuro_admin@sukhi.f3liz.casa"
   },
   // kiosk's newsstand sweep — a gentle tick that gathers a few hackers.pub
   // outboxes each time (see kiosk/sweep.js). Kind to a small source instance.
@@ -54,6 +60,8 @@
     { "pattern": "dash.atfedi.de", "custom_domain": true },
     // Translating the long-form pages — open to any fediverse account (see
     // translate/auth.js). Needs worker/translate/schema.sql applied once.
-    { "pattern": "translate.atfedi.de", "custom_domain": true }
+    { "pattern": "translate.atfedi.de", "custom_domain": true },
+    // The same desk, for rewriting a page in your own words.
+    { "pattern": "write.atfedi.de", "custom_domain": true }
   ]
 }

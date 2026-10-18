@@ -24,3 +24,17 @@ CREATE TABLE IF NOT EXISTS translate_drafts (
   updated_at TEXT NOT NULL,
   PRIMARY KEY (doc, lang, idx, by_handle)
 );
+
+-- A page someone pressed "Send" on. The desk answers at once and the commit
+-- happens after (ctx.waitUntil), so the writer never waits on GitHub; this
+-- row is how the desk finds out how it went: sending → published | proposed
+-- (url is the pull request) | failed.
+CREATE TABLE IF NOT EXISTS translate_sends (
+  id         TEXT PRIMARY KEY,
+  by_handle  TEXT NOT NULL,
+  doc        TEXT NOT NULL,
+  lang       TEXT NOT NULL,
+  status     TEXT NOT NULL,
+  url        TEXT,
+  updated_at TEXT NOT NULL
+);

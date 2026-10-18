@@ -54,6 +54,22 @@ async function resolve(env, url, lang, path) {
   };
 }
 
+// Who wrote the page, from git history (atfedi-content scripts/build.mjs):
+// the people who wrote it, or the AI when no one has rewritten it yet, and
+// any AI that helped. Then a way in to rewrite it yourself.
+function creditsHtml(lang, doc, credits) {
+  const people = credits?.authors?.filter((a) => !a.ai).map((a) => a.name) ?? [];
+  const ais = credits?.authors?.filter((a) => a.ai).map((a) => a.name) ?? [];
+  const by = people.length ? people : ais;
+  const assisted = (credits?.assisted ?? []).filter((n) => !by.includes(n));
+  const edit = `https://write.atfedi.de/#${new URLSearchParams({ doc, from: lang, to: lang })}`;
+  const parts = [];
+  if (by.length) parts.push(`${esc(t(lang, 'credits.by'))} ${by.map(esc).join(', ')}`);
+  if (assisted.length) parts.push(`${esc(t(lang, 'credits.assisted'))} ${assisted.map(esc).join(', ')}`);
+  parts.push(`<a href="${esc(edit)}">${esc(t(lang, 'credits.edit'))}</a>`);
+  return `<p class="doc-credits">${parts.join(' · ')}</p>`;
+}
+
 // The shell's head still names /doc-shell/; point it at the real path.
 const fixPath = (shellPath, realPath) => ({
   element(e) {
@@ -68,8 +84,9 @@ const fixPath = (shellPath, realPath) => ({
 export async function serveDocPage(request, env, url, lang, path) {
   const route = await resolve(env, url, lang, path);
   if (!route) return null;
-  const markdown = await contentFile(env, route.doc, lang);
+  const [markdown, index] = await Promise.all([contentFile(env, route.doc, lang), contentIndex(env)]);
   if (markdown === null) return null;
+  const credits = index.docs.find((d) => d.doc === route.doc)?.files?.[lang]?.credits;
   const icons = route.icons ?? (await siteData(env, url)).icons;
   const page = renderToolPage(markdown, route.kicker, icons);
   const title = route.title(page);
@@ -88,7 +105,7 @@ export async function serveDocPage(request, env, url, lang, path) {
     .on('[data-doc-grid]', {
       element: (e) => e.setAttribute('style', `--color-lane: var(--color-${route.lane})`),
     })
-    .on('[data-doc-body]', { element: (e) => e.setInnerContent(page.html, { html: true }) })
+    .on('[data-doc-body]', { element: (e) => e.setInnerContent(page.html + creditsHtml(lang, route.doc, credits), { html: true }) })
     .on('[data-doc-toc]', {
       element: (e) => (page.toc ? e.setInnerContent(page.toc, { html: true }) : e.remove()),
     })

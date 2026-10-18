@@ -1,4 +1,5 @@
-// translate.atfedi.de's login — any fediverse account, not just sukhi.
+// translate.atfedi.de's and write.atfedi.de's login — any fediverse account,
+// not just sukhi.
 //
 // console, yum and dash sign in against sukhi alone and then check an
 // allowlist, because what they guard is hard to undo. Translating is the
@@ -9,7 +10,7 @@
 //   - Mastodon-compatible OAuth2 (Mastodon, GoToSocial, Pleroma/Akkoma,
 //     Hollo, sukhi, …): we register an app with each server the first time
 //     someone from it signs in, and keep it in oauth_app (app_name
-//     'translate', base = that server).
+//     'translate' or 'write', base = that server).
 //   - MiAuth (Misskey and its forks): no app registration, just a session id
 //     the server hands back with a token.
 // Which one a server speaks is read from its NodeInfo.
@@ -21,10 +22,19 @@
 import { getOAuthApp, putOAuthApp } from '../federation/store.js';
 import { putSession, getSession, deleteSession } from './store.js';
 
-const APP_NAME = 'translate';
-const CLIENT_NAME = 'atfedi.de translate';
-const WEBSITE = 'https://translate.atfedi.de';
-const REDIRECT_URI = 'https://translate.atfedi.de/callback';
+// The desk answers on two hosts (translate.atfedi.de, write.atfedi.de), and
+// a server only sends someone back to the address the app registered, so each
+// host is its own app.
+const APPS = {
+  'translate.atfedi.de': { app: 'translate', name: 'atfedi.de translate' },
+  'write.atfedi.de': { app: 'write', name: 'atfedi.de write' },
+};
+function appFor(request) {
+  const host = new URL(request.url).hostname;
+  const { app, name } = APPS[host] ?? APPS['translate.atfedi.de'];
+  const site = `https://${APPS[host] ? host : 'translate.atfedi.de'}`;
+  return { APP_NAME: app, CLIENT_NAME: name, WEBSITE: site, REDIRECT_URI: `${site}/callback` };
+}
 const SCOPE = 'read';
 const SESSION_TTL_S = 60 * 60 * 24 * 30; // a month
 const STATE_TTL_S = 600;
@@ -92,7 +102,7 @@ async function softwareOf(host) {
 
 // This app's OAuth client on a Mastodon-compatible server, registering on
 // first need.
-async function getApp(env, host) {
+async function getApp(env, host, { APP_NAME, CLIENT_NAME, WEBSITE, REDIRECT_URI }) {
   const base = `https://${host}`;
   const existing = await getOAuthApp(env.FEDI_DB, base, APP_NAME);
   if (existing) return { base, ...existing };
@@ -115,6 +125,8 @@ async function getApp(env, host) {
 
 // GET /login?server=example.social — send them to their own server.
 export async function handleLogin(request, env) {
+  const site = appFor(request);
+  const { CLIENT_NAME, REDIRECT_URI } = site;
   const host = normalizeServer(new URL(request.url).searchParams.get('server'));
   if (!host) return text('Please enter the server your account lives on, like mastodon.social.', 400);
 
@@ -134,7 +146,7 @@ export async function handleLogin(request, env) {
     flow = 'oauth';
     let app;
     try {
-      app = await getApp(env, host);
+      app = await getApp(env, host, site);
     } catch {
       return text(`Couldn't sign in with ${host}. It may not support this kind of login yet.`, 502);
     }
@@ -156,6 +168,8 @@ export async function handleLogin(request, env) {
 // (MiAuth). Either way we end up with @username@host.
 export async function handleCallback(request, env) {
   const url = new URL(request.url);
+  const site = appFor(request);
+  const { REDIRECT_URI } = site;
   const [flow, host, state] = (parseCookies(request).tr_state ?? '').split(' ');
   if (!flow || !host || !state) return text('Login took too long. Please try again.', 400);
 
@@ -174,7 +188,7 @@ export async function handleCallback(request, env) {
       if (url.searchParams.get('state') !== state) throw new Error('state');
       const code = url.searchParams.get('code');
       if (!code) throw new Error('code');
-      const app = await getApp(env, host);
+      const app = await getApp(env, host, site);
       const tok = await fetchJson(new URL('/oauth/token', app.base), {
         method: 'POST',
         headers: { 'content-type': 'application/json' },

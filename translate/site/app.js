@@ -1,13 +1,17 @@
 // translate.atfedi.de — two panes side by side, like an editor's split view:
 // the source language on the left (read-only), yours on the right. Both are
 // split into paragraphs and kept level row by row. Drafts save as you type
-// (when signed in), and "Download" puts the right pane back together as a
-// markdown file.
+// (when signed in), "Download" puts the right pane back together as a
+// markdown file, and "Send" commits it to atfedi-content as you.
+//
+// write.atfedi.de is the same desk with the same language on both sides: the
+// page as it is on the left, your own rewrite on the right.
 
 import { paragraphs, unwrap, isFence, highlight, check } from './markdown.js';
 
 const LANGS = ['ko', 'ja', 'en'];
 const LANG_NAMES = { en: 'English', ja: '日本語', ko: '한국어' };
+const WRITE = location.hostname.startsWith('write.');
 
 const STRINGS = {
   en: {
@@ -19,14 +23,26 @@ const STRINGS = {
     howto: "The left side is the source. Each paragraph lines up with its translation, but they don't have to match word for word. Write it the way your language would say it.",
     readOnly: 'read-only',
     download: 'Download',
+    writeTagline: 'Rewrite an atfedi.de page in your own words',
+    writeHowto: "The left side is the page as it is. Rewrite it on the right the way you'd say it. When you send it, the commit is yours, and Claude is credited as Assisted-by if it wrote the version you started from.",
+    send: 'Send',
+    picture: 'Picture',
+    pictureFailed: "A picture couldn't be uploaded. Try sending again.",
+    published: 'Published. It shows on the site in a minute or two.',
+    proposed: 'Sent as a pull request. It goes up once someone looks it over:',
+    notSent: "Couldn't send it. Your drafts are still here.",
+    sendingAs: (p) => `Sending as ${p}…`,
+    undo: 'Undo',
+    sent: 'Sent.',
     goesTo: (p) => `It goes to ${p} in atfedi-content.`,
     signedIn: 'Signed in as', logout: 'Sign out',
     saving: 'saving…', saved: 'saved',
-    notSaved: "couldn't save",
-    signInToSave: 'Sign in to keep drafts. You can still download what you write.',
+    notSaved: 'saved on this device only',
+    signInToSave: 'Your drafts stay on this device. Sign in to keep them anywhere and to send.',
     progress: (done, total) => `${done} / ${total} translated`,
     warnings: (n) => `${n} to check`,
     nextEmpty: 'Next untranslated',
+    rewritten: (done, total) => `${done} / ${total} rewritten`,
     copySource: 'Copy the source',
     keys: 'Alt+↑↓ move between paragraphs · Ctrl+Enter next untranslated · Ctrl+Shift+Enter copy the source in',
     checks: {
@@ -46,14 +62,26 @@ const STRINGS = {
     howto: '左が原文。段落ごとに横に並びますが、一語ずつ合わせなくて大丈夫。その言語らしい言い方で。',
     readOnly: '読み取り専用',
     download: 'ダウンロード',
+    writeTagline: 'atfedi.de のページを、自分のことばで書き直す',
+    writeHowto: '左がいまのページです。右に、自分の言い方で書き直してください。送ると、コミットはあなたの名前になります。もとの文を Claude が書いていたら、Assisted-by に Claude が入ります。',
+    send: '送る',
+    picture: '画像',
+    pictureFailed: '画像をアップロードできませんでした。もう一度送ってみてください。',
+    published: '公開しました。1、2分でサイトに出ます。',
+    proposed: 'PR として送りました。だれかが見てから公開されます:',
+    notSent: '送れませんでした。下書きは残っています。',
+    sendingAs: (p) => `${p} として送ります…`,
+    undo: '取り消す',
+    sent: '送りました。',
     goesTo: (p) => `atfedi-content の ${p} に置くものです。`,
     signedIn: 'ログイン中', logout: 'ログアウト',
     saving: '保存中…', saved: '保存しました',
-    notSaved: '保存できませんでした',
-    signInToSave: 'ログインすると下書きが残ります。ダウンロードはログインなしでもできます。',
+    notSaved: 'この端末にだけ保存しました',
+    signInToSave: '下書きはこの端末に残ります。ログインすると、どこでも続きが書けて、送れるようになります。',
     progress: (done, total) => `${total} 段落中 ${done} 訳済み`,
     warnings: (n) => `確認 ${n}`,
     nextEmpty: '次の未訳へ',
+    rewritten: (done, total) => `${total} 段落中 ${done} 書き直し済み`,
     copySource: '原文を写す',
     keys: 'Alt+↑↓ 段落を移動 · Ctrl+Enter 次の未訳へ · Ctrl+Shift+Enter 原文を写す',
     checks: {
@@ -73,14 +101,26 @@ const STRINGS = {
     howto: '왼쪽이 원문이에요. 문단마다 옆에 나란히 놓이지만, 한 단어씩 맞출 필요는 없어요. 그 언어다운 말투로 써 주세요.',
     readOnly: '읽기 전용',
     download: '내려받기',
+    writeTagline: 'atfedi.de 페이지를 내 말로 다시 써요',
+    writeHowto: '왼쪽이 지금의 페이지예요. 오른쪽에 내 말투로 다시 써 주세요. 보내면 커밋은 내 이름으로 남아요. 원래 글을 Claude가 썼다면 Assisted-by에 Claude가 들어가요.',
+    send: '보내기',
+    picture: '사진',
+    pictureFailed: '사진을 올리지 못했어요. 다시 보내 보세요.',
+    published: '공개했어요. 1~2분 뒤에 사이트에 나와요.',
+    proposed: 'PR로 보냈어요. 누군가 확인한 뒤에 공개돼요:',
+    notSent: '보내지 못했어요. 초안은 남아 있어요.',
+    sendingAs: (p) => `${p}(으)로 보내요…`,
+    undo: '취소',
+    sent: '보냈어요.',
     goesTo: (p) => `atfedi-content의 ${p}에 들어갈 파일이에요.`,
     signedIn: '로그인:', logout: '로그아웃',
     saving: '저장 중…', saved: '저장했어요',
-    notSaved: '저장하지 못했어요',
-    signInToSave: '로그인하면 초안이 남아요. 내려받기는 로그인 없이도 돼요.',
+    notSaved: '이 기기에만 저장했어요',
+    signInToSave: '초안은 이 기기에 남아요. 로그인하면 어디서든 이어 쓰고 보낼 수 있어요.',
     progress: (done, total) => `${total}개 중 ${done}개 번역`,
     warnings: (n) => `확인 ${n}`,
     nextEmpty: '다음 빈 문단',
+    rewritten: (done, total) => `${total}개 중 ${done}개 다시 씀`,
     copySource: '원문 복사',
     keys: 'Alt+↑↓ 문단 이동 · Ctrl+Enter 다음 빈 문단 · Ctrl+Shift+Enter 원문 복사해 넣기',
     checks: {
@@ -96,6 +136,13 @@ const STRINGS = {
 const uiLang = LANGS.find((l) => navigator.language.toLowerCase().startsWith(l)) ?? 'en';
 const s = STRINGS[uiLang];
 document.documentElement.lang = uiLang;
+if (WRITE) {
+  s.tagline = s.writeTagline;
+  s.howto = s.writeHowto;
+  document.title = 'write — atfedi.de';
+  document.querySelector('.title-tag').firstChild.textContent = 'write ';
+  document.getElementById('to').closest('label').hidden = true;
+}
 for (const el of document.querySelectorAll('[data-t]')) el.textContent = s[el.dataset.t];
 
 const $ = (id) => document.getElementById(id);
@@ -119,6 +166,45 @@ async function getJson(url, init) {
 async function getText(url) {
   const res = await fetch(url);
   return res.ok ? await res.text() : null;
+}
+
+// --- on this device ---------------------------------------------------------
+//
+// The desk never makes you wait on the Worker. Every keystroke is kept here
+// first (localStorage, synchronous), and the server copy follows quietly.
+// Pages, the page list and who you are come from here too when you've been
+// before, so the desk opens on what you saw last and refreshes behind it.
+
+const local = {
+  get(key) {
+    try {
+      return JSON.parse(localStorage.getItem(`desk:${key}`));
+    } catch {
+      return null;
+    }
+  },
+  set(key, value) {
+    try {
+      if (value == null) localStorage.removeItem(`desk:${key}`);
+      else localStorage.setItem(`desk:${key}`, JSON.stringify(value));
+    } catch {
+      // full or blocked: the server copy still works
+    }
+  },
+};
+const draftKey = (doc, lang) => `drafts:${doc}:${lang}`;
+
+// cached first, then the network; onFresh runs when the network says otherwise
+async function swr(key, load, onFresh) {
+  const cached = local.get(key);
+  const fresh = load().then((v) => {
+    if (v != null && JSON.stringify(v) !== JSON.stringify(cached)) {
+      local.set(key, v);
+      if (cached != null) onFresh?.(v);
+    }
+    return v;
+  });
+  return cached ?? (await fresh);
 }
 
 function readHash() {
@@ -154,6 +240,10 @@ function fillLangs(doc) {
   const to = $('to');
   to.replaceChildren(...LANGS.map((l) => el('option', { value: l, textContent: LANG_NAMES[l] })));
   to.value = LANGS.includes(hash.to) && hash.to !== from.value ? hash.to : uiLang !== from.value ? uiLang : LANGS.find((l) => l !== from.value);
+  if (WRITE) {
+    from.value = have.includes(hash.from) ? hash.from : have.includes(uiLang) ? uiLang : have[0];
+    to.value = from.value;
+  }
 }
 
 // --- the editors ---------------------------------------------------------------
@@ -177,30 +267,51 @@ function fillLangs(doc) {
 
 const saveTimers = new Map();
 let rows = [];
+let renderCount = 0;
 
+function keepLocally(doc, lang, idx, text) {
+  const all = local.get(draftKey(doc, lang)) ?? {};
+  if (text.trim()) all[idx] = text;
+  else delete all[idx];
+  local.set(draftKey(doc, lang), Object.keys(all).length ? all : null);
+}
+
+// The server copy, so a draft follows you to another device. Quiet when it
+// works; when it doesn't, the words are still here, and the tab says so.
 async function saveDraft(doc, lang, idx, text, row) {
+  row.el.classList.toggle('drafted', text.trim() !== '');
   if (!me) return;
   const status = $('status');
-  status.textContent = s.saving;
   try {
     await getJson('/api/drafts', {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ doc, lang, idx, text }),
     });
-    status.textContent = s.saved;
-    row.el.classList.toggle('drafted', text.trim() !== '');
+    if (status.textContent === s.notSaved) status.textContent = '';
   } catch {
     status.textContent = s.notSaved;
   }
 }
 
-const loadDrafts = (doc, lang) =>
-  me
-    ? getJson(`/api/drafts?doc=${encodeURIComponent(doc)}&lang=${lang}`)
-        .then((r) => r.drafts)
-        .catch(() => ({}))
-    : Promise.resolve({});
+// The server's drafts arrive after the page is up, and fill only paragraphs
+// this device has nothing for and you haven't touched.
+async function mergeServerDrafts(doc, lang, at) {
+  if (!me) return;
+  const server = await getJson(`/api/drafts?doc=${encodeURIComponent(doc)}&lang=${lang}`)
+    .then((r) => r.drafts)
+    .catch(() => ({}));
+  if (at !== renderCount) return; // a different page is up now
+  const mine = local.get(draftKey(doc, lang)) ?? {};
+  for (const [idx, text] of Object.entries(server)) {
+    const row = rows[idx];
+    if (!row || mine[idx] != null || row.touched) continue;
+    row.box.value = text;
+    row.el.classList.add('drafted');
+    paint(row);
+    review(row);
+  }
+}
 
 // The highlighted copy under the textarea; the trailing newline keeps an
 // ending blank line from collapsing, so the heights always agree.
@@ -217,9 +328,11 @@ function review(row) {
 }
 
 function tally() {
-  const done = rows.filter((r) => r.box.value.trim()).length;
+  const done = WRITE
+    ? rows.filter((r) => r.box.value.trim() && r.box.value.trim() !== (r.src ?? '').trim()).length
+    : rows.filter((r) => r.box.value.trim()).length;
   const warn = rows.filter((r) => r.el.classList.contains('warn')).length;
-  $('progress').textContent = `${s.progress(done, rows.length)}${warn ? ` · ${s.warnings(warn)}` : ''}`;
+  $('progress').textContent = `${(WRITE ? s.rewritten : s.progress)(done, rows.length)}${warn ? ` · ${s.warnings(warn)}` : ''}`;
 }
 
 function focusRow(i, atEnd = false) {
@@ -268,16 +381,26 @@ async function renderPairs() {
   const doc = docs.find((d) => d.doc === $('doc').value);
   if (!doc) return;
   const from = $('from').value;
+  if (WRITE) $('to').value = from;
   const to = $('to').value;
   writeHash();
 
-  const [source, target, drafts] = await Promise.all([
-    getText(`/content/${doc.doc}.${from}.md`),
-    doc.title[to] ? getText(`/content/${doc.doc}.${to}.md`) : null,
-    loadDrafts(doc.doc, to),
-  ]);
+  const at = ++renderCount;
+  // a newer copy of either side re-renders, unless you've started writing
+  const refresh = () => at === renderCount && !rows.some((r) => r.touched) && renderPairs();
+  const page = (lang) =>
+    swr(`page:${doc.doc}:${lang}`, () => getText(`/content/${doc.doc}.${lang}.md`), refresh);
+  const [source, target] = await Promise.all([page(from), doc.title[to] ? page(to) : null]);
+  if (at !== renderCount) return;
+  const drafts = local.get(draftKey(doc.doc, to)) ?? {};
   const left = paragraphs(source ?? '').map(unwrap);
   const right = paragraphs(target ?? '').map(unwrap);
+  // a draft the page now says too has been published: let it go
+  const stale = Object.keys(drafts).filter((i) => drafts[i].trim() === (right[i] ?? '').trim());
+  if (stale.length) {
+    for (const i of stale) delete drafts[i];
+    local.set(draftKey(doc.doc, to), Object.keys(drafts).length ? drafts : null);
+  }
   const count = Math.max(left.length, right.length);
   const name = doc.doc.split('/').pop();
 
@@ -291,8 +414,10 @@ async function renderPairs() {
   $('tab-to').replaceChildren(
     `${name}.${to}.md`,
     el('span', { className: 'tag', id: 'status' }),
-    jump,
+    ...(WRITE ? [] : [jump]),
+    pictureButton(),
     downloadButton(to),
+    sendButton(doc.doc, to, repoPathOf(doc, from, to)),
   );
 
   const pane = $('pairs');
@@ -343,7 +468,23 @@ async function renderPairs() {
       saveDraft(doc.doc, to, idx, box.value, row);
     });
     box.addEventListener('keydown', (e) => onKey(e, row));
+    box.addEventListener('paste', (e) => {
+      const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith('image/'));
+      if (!files.length || !me) return;
+      e.preventDefault();
+      for (const f of files) addPicture(f, row);
+    });
+    box.addEventListener('dragover', (e) => me && e.preventDefault());
+    box.addEventListener('drop', (e) => {
+      const files = [...(e.dataTransfer?.files ?? [])].filter((f) => f.type.startsWith('image/'));
+      if (!files.length || !me) return;
+      e.preventDefault();
+      box.focus();
+      for (const f of files) addPicture(f, row);
+    });
     box.addEventListener('input', () => {
+      row.touched = true;
+      keepLocally(doc.doc, to, idx, box.value);
       paint(row);
       review(row);
       clearTimeout(saveTimers.get(idx));
@@ -353,21 +494,26 @@ async function renderPairs() {
     pane.append(rowEl);
   }
   rows.forEach(review);
+  mergeServerDrafts(doc.doc, to, at);
 
-  const repoPath = doc.repoPath[to] ?? doc.repoPath[from].replace(`.${from}.md`, `.${to}.md`);
-  $('repo-path').textContent = `${s.goesTo(repoPath)}${me ? '' : ` ${s.signInToSave}`}`;
+  $('repo-path').textContent = `${s.goesTo(repoPathOf(doc, from, to))}${me ? '' : ` ${s.signInToSave}`}`;
 }
 
+const repoPathOf = (doc, from, to) =>
+  doc.repoPath[to] ?? doc.repoPath[from].replace(`.${from}.md`, `.${to}.md`);
+
 // The right pane, put back together as one markdown file.
+const assemble = () =>
+  rows
+    .map((r) => r.box.value.trim())
+    .filter(Boolean)
+    .join('\n\n') + '\n';
+
 function downloadButton(lang) {
   const button = el('button', { type: 'button', className: 'small', textContent: s.download });
   button.addEventListener('click', () => {
     const doc = $('doc').value;
-    const text =
-      rows.map((r) => r.box)
-        .map((t) => t.value.trim())
-        .filter(Boolean)
-        .join('\n\n') + '\n';
+    const text = assemble();
     const a = el('a', {
       href: URL.createObjectURL(new Blob([text], { type: 'text/markdown' })),
       download: `${doc.split('/').pop()}.${lang}.md`,
@@ -378,13 +524,193 @@ function downloadButton(lang) {
   return button;
 }
 
+// --- pictures --------------------------------------------------------------
+//
+// Like early Instagram: the upload starts the moment a picture is chosen, and
+// you keep writing while it goes. The picture is shrunk here first (long side
+// 1600px, WebP), named by the sha256 of those bytes, and its markdown goes in
+// at once with the cursor in the alt text, so nothing waits on the network.
+// The Worker names it the same way, so the name is already final. "Send" only
+// waits if an upload is somehow still on its way.
+
+const MAX_SIDE = 1600;
+const uploads = new Map(); // name → { blob, promise }
+const EXT = { 'image/webp': 'webp', 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif' };
+
+async function shrink(file) {
+  if (file.type === 'image/gif') return file; // keep it moving
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+  const canvas = el('canvas', { width: Math.round(bitmap.width * scale), height: Math.round(bitmap.height * scale) });
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close?.();
+  const blob = await new Promise((r) => canvas.toBlob(r, 'image/webp', 0.85));
+  // a browser without WebP encoding hands back PNG; if that's bigger, keep the original
+  return blob && (blob.type === 'image/webp' || blob.size < file.size) ? blob : file;
+}
+
+async function sha256(blob) {
+  const digest = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function upload(blob, tries = 3) {
+  for (let i = 0; ; i++) {
+    try {
+      return await getJson('/api/upload', { method: 'POST', headers: { 'content-type': blob.type }, body: blob });
+    } catch (e) {
+      if (i + 1 >= tries) throw e;
+      await new Promise((r) => setTimeout(r, 800 * 2 ** i));
+    }
+  }
+}
+
+function insertAt(box, text, selectFrom, selectTo) {
+  box.focus();
+  const at = box.selectionStart;
+  if (!document.execCommand('insertText', false, text)) {
+    box.setRangeText(text, at, box.selectionEnd, 'end');
+    box.dispatchEvent(new Event('input'));
+  }
+  box.setSelectionRange(at + selectFrom, at + selectTo);
+}
+
+async function addPicture(file, row) {
+  const ext0 = EXT[file.type];
+  if (!ext0) return;
+  const blob = await shrink(file);
+  const name = `${await sha256(blob)}.${EXT[blob.type] ?? ext0}`;
+  // its own paragraph, cursor between the [] for the alt text
+  const before = row.box.value.slice(0, row.box.selectionStart);
+  const lead = before && !before.endsWith('\n\n') ? (before.endsWith('\n') ? '\n' : '\n\n') : '';
+  insertAt(row.box, `${lead}![](/media/${name})\n\n`, lead.length + 2, lead.length + 2);
+  if (!uploads.has(name)) {
+    const promise = upload(blob);
+    promise.catch(() => {}); // looked at again when sending
+    uploads.set(name, { blob, promise });
+  }
+}
+
+// Before sending: every picture has made it up. One that failed in the
+// background gets one more try here.
+async function uploadsSettled() {
+  for (const [name, u] of uploads) {
+    try {
+      await u.promise;
+    } catch {
+      u.promise = upload(u.blob, 1);
+      try {
+        await u.promise;
+      } catch {
+        throw new Error('picture');
+      }
+    }
+    uploads.set(name, u);
+  }
+}
+
+function pictureButton() {
+  const input = el('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp,image/gif', multiple: true, hidden: true });
+  const button = el('button', { type: 'button', className: 'small ghost', textContent: s.picture });
+  let target = null;
+  if (!me) {
+    button.disabled = true;
+    button.title = s.signInToSave;
+  }
+  // remember the paragraph you were in; the click takes focus away from it
+  button.addEventListener('mousedown', () => {
+    target = rows.find((r) => r.el.classList.contains('active')) ?? rows.at(-1);
+  });
+  button.addEventListener('click', () => input.click());
+  input.addEventListener('change', () => {
+    const row = target ?? rows.at(-1);
+    for (const f of input.files) addPicture(f, row);
+    input.value = '';
+  });
+  return el('span', {}, button, input);
+}
+
+// Commit the right pane to atfedi-content as you. Publishers' pages go
+// straight up; anyone else's become a pull request (worker/content/github.js).
+//
+// No waiting here either. Pressing Send gives you a few seconds to take it
+// back (and pictures use them to finish going up); then the Worker answers
+// at once and does the commit after, and the result turns up in the note
+// below when it's in.
+const UNDO_MS = 4000;
+
+function sendButton(doc, lang, repoPath) {
+  const button = el('button', { type: 'button', className: 'small', textContent: s.send });
+  if (!me) {
+    button.disabled = true;
+    button.title = s.signInToSave;
+    return button;
+  }
+  const note = () => $('repo-path');
+  button.addEventListener('click', () => {
+    const text = assemble();
+    let undone = false;
+    const undo = el('button', { type: 'button', className: 'small ghost', textContent: s.undo });
+    undo.addEventListener('click', () => {
+      undone = true;
+      clearTimeout(timer);
+      button.disabled = false;
+      note().textContent = s.goesTo(repoPath);
+    });
+    button.disabled = true;
+    note().replaceChildren(s.sendingAs(me), ' ', undo);
+    const ready = uploadsSettled(); // starts now, inside the undo window
+    ready.catch(() => {});
+    const timer = setTimeout(async () => {
+      if (undone) return;
+      try {
+        await ready;
+        const { id } = await getJson('/api/send', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ doc, lang, text }),
+        });
+        // the drafts stay on this device until the page itself says the same
+        // (renderPairs drops them then), so a pull request still shows yours
+        note().textContent = s.sent;
+        follow(id, repoPath);
+      } catch (e) {
+        note().textContent = e.message === 'picture' ? s.pictureFailed : s.notSent;
+      } finally {
+        button.disabled = false;
+      }
+    }, UNDO_MS);
+  });
+  return button;
+}
+
+// How the send went, checked quietly until it's settled.
+async function follow(id, repoPath) {
+  for (let wait = 1500; wait < 60000; wait *= 1.5) {
+    await new Promise((r) => setTimeout(r, wait));
+    const res = await getJson(`/api/sends/${id}`).catch(() => null);
+    if (!res || res.status === 'sending') continue;
+    const note = $('repo-path');
+    if (res.status === 'published') note.textContent = s.published;
+    else if (res.status === 'proposed') note.replaceChildren(s.proposed, ' ', el('a', { href: res.url, textContent: repoPath }));
+    else note.textContent = s.notSent;
+    return;
+  }
+}
+
 // --- start -------------------------------------------------------------------
 
 async function start() {
+  // what you saw last, at once; the network catches up behind it
   [me, docs] = await Promise.all([
-    getJson('/api/me').then((r) => r.handle).catch(() => null),
-    getJson('/docs.json'),
+    swr('me', () => getJson('/api/me').then((r) => r.handle ?? false).catch(() => null), (v) => {
+      me = v || null;
+      renderWho();
+      renderPairs();
+    }).then((v) => v || null),
+    swr('docs', () => getJson('/docs.json').catch(() => null)),
   ]);
+  docs ??= [];
   renderWho();
 
   const hash = readHash();
@@ -406,4 +732,19 @@ async function start() {
   await renderPairs();
 }
 
-start();
+// Once the desk is up and idle, fetch the other pages ahead, so switching
+// opens them at once.
+function prefetch() {
+  const idle = window.requestIdleCallback ?? ((f) => setTimeout(f, 1500));
+  idle(async () => {
+    for (const d of docs) {
+      for (const lang of new Set([$('from').value, $('to').value])) {
+        if (!d.title[lang] || local.get(`page:${d.doc}:${lang}`)) continue;
+        const text = await getText(`/content/${d.doc}.${lang}.md`);
+        if (text != null) local.set(`page:${d.doc}:${lang}`, text);
+      }
+    }
+  });
+}
+
+start().then(prefetch);
