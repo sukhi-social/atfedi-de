@@ -1,7 +1,8 @@
-// translate.atfedi.de — two editors side by side, the source language on the
-// left and yours on the right, split into paragraphs so each row lines up.
-// Both sides are editable; drafts save as you type (when signed in), and each
-// column's "Download" puts it back together as a markdown file.
+// translate.atfedi.de — two panes side by side, like an editor's split view:
+// the source language on the left (read-only), yours on the right. Both are
+// split into paragraphs and kept level row by row. Drafts save as you type
+// (when signed in), and "Download" puts the right pane back together as a
+// markdown file.
 
 const LANGS = ['ko', 'ja', 'en'];
 const LANG_NAMES = { en: 'English', ja: '日本語', ko: '한국어' };
@@ -13,12 +14,13 @@ const STRINGS = {
     loginButton: 'Sign in',
     loginHint: 'Mastodon, Misskey, GoToSocial, and most others work. We only read your account name.',
     doc: 'Page', from: 'From', to: 'Into',
-    howto: "Both sides are editable, and each row is one paragraph. They don't have to match word for word. Write it the way your language would say it.",
+    howto: "The left side is the source. Each paragraph lines up with its translation, but they don't have to match word for word. Write it the way your language would say it.",
+    readOnly: 'read-only',
     download: 'Download',
     goesTo: (p) => `It goes to ${p} in the repository.`,
     signedIn: 'Signed in as', logout: 'Sign out',
-    mine: 'your draft', live: 'on the site now', saving: 'saving…', saved: 'saved',
-    notSaved: "couldn't save", extra: '(no matching paragraph in the source)',
+    saving: 'saving…', saved: 'saved',
+    notSaved: "couldn't save",
     signInToSave: 'Sign in to keep drafts. You can still download what you write.',
   },
   ja: {
@@ -27,12 +29,13 @@ const STRINGS = {
     loginButton: 'ログイン',
     loginHint: 'Mastodon、Misskey、GoToSocial など、たいていのサーバーで使えます。読むのはアカウント名だけ。',
     doc: 'ページ', from: '原文', to: '訳す先',
-    howto: '左右どちらも書きかえられます。一行が一段落。一語ずつ合わせなくて大丈夫。その言語らしい言い方で。',
+    howto: '左が原文。段落ごとに横に並びますが、一語ずつ合わせなくて大丈夫。その言語らしい言い方で。',
+    readOnly: '読み取り専用',
     download: 'ダウンロード',
     goesTo: (p) => `リポジトリの ${p} に置くものです。`,
     signedIn: 'ログイン中', logout: 'ログアウト',
-    mine: 'わたしの下書き', live: 'いまのサイト', saving: '保存中…', saved: '保存しました',
-    notSaved: '保存できませんでした', extra: '(原文に対応する段落なし)',
+    saving: '保存中…', saved: '保存しました',
+    notSaved: '保存できませんでした',
     signInToSave: 'ログインすると下書きが残ります。ダウンロードはログインなしでもできます。',
   },
   ko: {
@@ -41,12 +44,13 @@ const STRINGS = {
     loginButton: '로그인',
     loginHint: '마스토돈, Misskey, GoToSocial 등 대부분의 서버에서 돼요. 읽는 건 계정 이름뿐이에요.',
     doc: '페이지', from: '원문', to: '옮길 언어',
-    howto: '양쪽 모두 고칠 수 있고, 한 줄이 한 문단이에요. 한 단어씩 맞출 필요는 없어요. 그 언어다운 말투로 써 주세요.',
+    howto: '왼쪽이 원문이에요. 문단마다 옆에 나란히 놓이지만, 한 단어씩 맞출 필요는 없어요. 그 언어다운 말투로 써 주세요.',
+    readOnly: '읽기 전용',
     download: '내려받기',
     goesTo: (p) => `저장소의 ${p}에 들어갈 파일이에요.`,
     signedIn: '로그인:', logout: '로그아웃',
-    mine: '내 초안', live: '지금 사이트', saving: '저장 중…', saved: '저장했어요',
-    notSaved: '저장하지 못했어요', extra: '(원문에 맞는 문단이 없어요)',
+    saving: '저장 중…', saved: '저장했어요',
+    notSaved: '저장하지 못했어요',
     signInToSave: '로그인하면 초안이 남아요. 내려받기는 로그인 없이도 돼요.',
   },
 };
@@ -150,72 +154,44 @@ function fillLangs(doc) {
   to.value = LANGS.includes(hash.to) && hash.to !== from.value ? hash.to : uiLang !== from.value ? uiLang : LANGS.find((l) => l !== from.value);
 }
 
-// --- the rows ----------------------------------------------------------------
+// --- the editors ---------------------------------------------------------------
+
+// Two panes, like an editor's side-by-side view: the source on the left is
+// read-only, yours on the right is editable. Each paragraph is one row of a
+// CSS grid, so a row is as tall as its taller side and the shorter side shows
+// a hatched filler under its text. Nothing is boxed; the panes read as two
+// continuous documents.
 
 const saveTimers = new Map();
 
-async function saveDraft(doc, lang, idx, text, mark) {
+async function saveDraft(doc, lang, idx, text, row) {
   if (!me) return;
-  mark.textContent = s.saving;
-  mark.className = 'mark';
+  const status = $('status');
+  status.textContent = s.saving;
   try {
     await getJson('/api/drafts', {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ doc, lang, idx, text }),
     });
-    mark.textContent = text.trim() ? s.saved : '';
-    mark.className = 'mark saved';
+    status.textContent = s.saved;
+    row.classList.toggle('drafted', text.trim() !== '');
   } catch {
-    mark.textContent = s.notSaved;
+    status.textContent = s.notSaved;
   }
 }
 
-// Both boxes in a row take the taller one's height, so the two columns stay
-// level paragraph by paragraph. (On a phone the columns stack, so each box
-// just fits itself.)
-const sideBySide = matchMedia('(min-width: 44rem)');
-
-function level(boxes) {
-  for (const b of boxes) b.style.height = 'auto';
-  if (!sideBySide.matches) {
-    for (const b of boxes) b.style.height = `${b.scrollHeight + 2}px`;
-    return;
-  }
-  const h = Math.max(...boxes.map((b) => b.scrollHeight)) + 2;
-  for (const b of boxes) b.style.height = `${h}px`;
+// A textarea as tall as its text: the grid row does the rest.
+function fit(box) {
+  box.style.height = 'auto';
+  box.style.height = `${box.scrollHeight}px`;
 }
 
-const levelAll = () => {
-  for (const row of document.querySelectorAll('.pair')) level([...row.querySelectorAll('textarea')]);
-};
 let resizeTimer;
 addEventListener('resize', () => {
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(levelAll, 150);
+  resizeTimer = setTimeout(() => document.querySelectorAll('.dst textarea').forEach(fit), 150);
 });
-sideBySide.addEventListener('change', levelAll);
-
-// One editable side of a row: starts from my draft, else what's on the site.
-function side(doc, lang, idx, live, draft) {
-  const mark = el('span', {
-    className: 'mark',
-    textContent: draft != null ? s.mine : live != null ? s.live : '',
-  });
-  const box = el('textarea', { value: draft ?? live ?? '', lang, rows: 1 });
-  box.dataset.lang = lang;
-  if (isCode(box.value)) box.classList.add('code');
-  const key = `${lang}:${idx}`;
-  box.addEventListener('input', () => {
-    clearTimeout(saveTimers.get(key));
-    saveTimers.set(key, setTimeout(() => saveDraft(doc, lang, idx, box.value, mark), 1200));
-  });
-  box.addEventListener('blur', () => {
-    clearTimeout(saveTimers.get(key));
-    saveDraft(doc, lang, idx, box.value, mark);
-  });
-  return { box, cell: el('div', { className: 'side' }, box, mark) };
-}
 
 const loadDrafts = (doc, lang) =>
   me
@@ -231,46 +207,80 @@ async function renderPairs() {
   const to = $('to').value;
   writeHash();
 
-  const [source, target, fromDrafts, toDrafts] = await Promise.all([
+  const [source, target, drafts] = await Promise.all([
     getText(`/content/${doc.doc}.${from}.md`),
     doc.title[to] ? getText(`/content/${doc.doc}.${to}.md`) : null,
-    loadDrafts(doc.doc, from),
     loadDrafts(doc.doc, to),
   ]);
   const left = paragraphs(source ?? '');
   const right = paragraphs(target ?? '');
   const rows = Math.max(left.length, right.length);
+  const name = doc.doc.split('/').pop();
 
-  const list = $('pairs');
-  list.replaceChildren(
-    el(
-      'li',
-      { className: 'pair head' },
-      el('div', {}, `${s.from} · ${LANG_NAMES[from]} `, downloadButton(from)),
-      el('div', {}, `${s.to} · ${LANG_NAMES[to]} `, downloadButton(to)),
-    ),
+  $('tab-from').replaceChildren(`${name}.${from}.md`, el('span', { className: 'tag', textContent: s.readOnly }));
+  $('tab-to').replaceChildren(
+    `${name}.${to}.md`,
+    el('span', { className: 'tag', id: 'status' }),
+    downloadButton(to),
   );
+
+  const pane = $('pairs');
+  pane.replaceChildren();
+  const boxes = [];
   for (let idx = 0; idx < rows; idx++) {
-    const a = side(doc.doc, from, idx, left[idx], fromDrafts[idx]);
-    const b = side(doc.doc, to, idx, right[idx], toDrafts[idx]);
-    if (left[idx] == null) a.box.placeholder = s.extra;
-    const boxes = [a.box, b.box];
-    for (const box of boxes) box.addEventListener('input', () => level(boxes));
-    list.append(el('li', { className: 'pair' }, a.cell, b.cell));
+    const src = left[idx];
+    const draft = drafts[idx];
+    const box = el('textarea', {
+      value: draft ?? right[idx] ?? '',
+      lang: to,
+      rows: 1,
+      spellcheck: true,
+      ariaLabel: `${LANG_NAMES[to]} ${idx + 1}`,
+    });
+    const row = el(
+      'div',
+      { className: `para${draft != null ? ' drafted' : ''}${isCode(src) ? ' code' : ''}` },
+      el(
+        'div',
+        { className: 'src' },
+        el('span', { className: 'num', textContent: String(idx + 1) }),
+        el('pre', { textContent: src ?? '', lang: from }),
+      ),
+      el('div', { className: 'dst' }, el('span', { className: 'num', textContent: String(idx + 1) }), box),
+    );
+    // the filler under a short paragraph still belongs to it
+    row.querySelector('.dst').addEventListener('mousedown', (e) => {
+      if (e.target === box) return;
+      e.preventDefault();
+      box.focus();
+      box.setSelectionRange(box.value.length, box.value.length);
+    });
+    const key = `${to}:${idx}`;
+    box.addEventListener('input', () => {
+      fit(box);
+      clearTimeout(saveTimers.get(key));
+      saveTimers.set(key, setTimeout(() => saveDraft(doc.doc, to, idx, box.value, row), 1200));
+    });
+    box.addEventListener('blur', () => {
+      clearTimeout(saveTimers.get(key));
+      saveDraft(doc.doc, to, idx, box.value, row);
+    });
+    pane.append(row);
+    boxes.push(box);
   }
-  levelAll();
+  boxes.forEach(fit);
 
   const repoPath = doc.repoPath[to] ?? doc.repoPath[from].replace(`.${from}.md`, `.${to}.md`);
   $('repo-path').textContent = `${s.goesTo(repoPath)}${me ? '' : ` ${s.signInToSave}`}`;
 }
 
-// The column for `lang`, put back together as one markdown file.
+// The right pane, put back together as one markdown file.
 function downloadButton(lang) {
   const button = el('button', { type: 'button', className: 'small', textContent: s.download });
   button.addEventListener('click', () => {
     const doc = $('doc').value;
     const text =
-      [...document.querySelectorAll(`.pair textarea[data-lang="${lang}"]`)]
+      [...document.querySelectorAll('.dst textarea')]
         .map((t) => t.value.trim())
         .filter(Boolean)
         .join('\n\n') + '\n';
