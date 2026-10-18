@@ -41,6 +41,32 @@ export function paragraphs(markdown) {
 
 export const isFence = (block) => /^(```|:::)/.test(block ?? '');
 
+// Join a paragraph's wrapped lines into one, the way markdown reads them (a
+// lone newline is a space). docs/publishing.md asks for one line per
+// paragraph anyway, and hard-wrapped source otherwise shows as ragged breaks
+// once the pane wraps it again. Lines that mean something on their own —
+// list items, headings, rules — still start a new line, and fences are
+// left exactly as they are.
+const NO_SPACE = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\u3000-\u303f\uff00-\uffef]/u;
+
+export function unwrap(block) {
+  if (block == null || isFence(block)) return block;
+  const out = [];
+  for (const line of block.split('\n')) {
+    const starts = /^\s*(?:[-*+]|\d+\.) |^#{1,6} |^---+$|^>/.test(line);
+    if (out.length === 0 || starts) out.push(line);
+    else {
+      const prev = out[out.length - 1].trimEnd();
+      const next = line.trim();
+      // Japanese and Chinese have no spaces between words, so a wrap there
+      // joins with nothing; everything else (Hangul included) gets a space.
+      const tight = NO_SPACE.test(prev.slice(-1)) && NO_SPACE.test(next[0] ?? '');
+      out[out.length - 1] = tight ? prev + next : `${prev} ${next}`;
+    }
+  }
+  return out.join('\n');
+}
+
 const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const span = (cls, t) => `<span class="${cls}">${t}</span>`;
 

@@ -4,7 +4,7 @@
 // (when signed in), and "Download" puts the right pane back together as a
 // markdown file.
 
-import { paragraphs, isFence, highlight, check } from './markdown.js';
+import { paragraphs, unwrap, isFence, highlight, check } from './markdown.js';
 
 const LANGS = ['ko', 'ja', 'en'];
 const LANG_NAMES = { en: 'English', ja: '日本語', ko: '한국어' };
@@ -276,8 +276,8 @@ async function renderPairs() {
     doc.title[to] ? getText(`/content/${doc.doc}.${to}.md`) : null,
     loadDrafts(doc.doc, to),
   ]);
-  const left = paragraphs(source ?? '');
-  const right = paragraphs(target ?? '');
+  const left = paragraphs(source ?? '').map(unwrap);
+  const right = paragraphs(target ?? '').map(unwrap);
   const count = Math.max(left.length, right.length);
   const name = doc.doc.split('/').pop();
 
