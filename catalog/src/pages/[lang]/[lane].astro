@@ -36,6 +36,10 @@ const categories = categoryKeys.map((key) => ({ key, label: t(`cat.${key}`) }));
       <h1 style="font-size: var(--text-xl)">
         <Phrase text={t(`catalog.${lane}.heading`)} lang={lang} />
       </h1>
+      <p class="note">
+        <Phrase text={t('catalog.more')} lang={lang} />
+        <a href="https://fedidb.org">FediDB</a>
+      </p>
     </section>
 
     <ToolFilter client:load categories={categories} allLabel={t('filter.all')} />
