@@ -308,7 +308,7 @@ async function renderPairs() {
       spellcheck: true,
       ariaLabel: `${LANG_NAMES[to]} ${idx + 1}`,
     });
-    const mirror = el('pre', { className: 'mirror', ariaHidden: 'true' });
+    const mirror = el('pre', { className: 'mirror', ariaHidden: 'true', lang: to });
     const flag = el('span', { className: 'flag', textContent: '!' });
     const copy = el('button', { type: 'button', className: 'copy', textContent: '⇥', title: s.copySource, tabIndex: -1 });
     const srcPre = el('pre', { lang: from });

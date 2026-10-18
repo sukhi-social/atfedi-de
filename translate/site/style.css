@@ -215,6 +215,9 @@ button.small { font-size: 0.75rem; padding: 0.1rem 0.6rem; white-space: nowrap; 
   tab-size: 4;
 }
 .src pre { color: var(--ink); }
+/* Korean breaks between words, as the site does (word-break: keep-all) */
+pre[lang='ko'],
+textarea[lang='ko'] { word-break: keep-all; }
 
 /* the editor: a highlighted copy in the flow sets the height, the textarea
    lies on top of it with clear text, so you see the colors and type in the
