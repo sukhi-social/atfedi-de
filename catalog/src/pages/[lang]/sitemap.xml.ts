@@ -11,12 +11,9 @@ const pages = [
   '/',
   '/use/',
   '/build/',
-  '/build/fedify/',
-  '/build/fedify/roadmap/',
-  '/build/fedify/feels-good/',
-  '/build/fedify/watch-out/',
-  '/build/fedify/running/',
 ];
+// The long-form pages (basics, tool guides) come from atfedi-content; the
+// Worker adds them before </urlset> (worker/content/pages.js).
 
 export const GET: APIRoute = ({ params }) => {
   const urls = pages

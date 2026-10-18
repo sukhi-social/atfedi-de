@@ -1,0 +1,283 @@
+/* Same clothes as the other back rooms (dash, yum editor): soft and plain. */
+
+:root {
+  --ink: #4a4640;
+  --muted: #8a847a;
+  --paper: #fbf9f5;
+  --card: #ffffff;
+  --line: #e7e1d6;
+  --accent: #2f6d5a;
+  --shadow: 0 2px 12px rgba(74, 70, 64, 0.1);
+  --faint: #b9b2a6;
+  --warn: #c07a2c;
+  --active: #f3f7f4;
+  --hover: #faf8f3;
+  --select: rgba(47, 109, 90, 0.18);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e8e3da;
+    --muted: #a39d92;
+    --paper: #1f1e1b;
+    --card: #2a2925;
+    --line: #3b3934;
+    --accent: #7cc2aa;
+    --shadow: none;
+    --faint: #6d685f;
+    --warn: #e0a15a;
+    --active: #2f3632;
+    --hover: #2e2d29;
+    --select: rgba(124, 194, 170, 0.28);
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  font-family: "Hiragino Maru Gothic ProN", "Apple SD Gothic Neo", system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.7;
+}
+
+.desk {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+
+header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.4rem;
+}
+
+.title-tag { font-size: 1.1rem; font-weight: 600; }
+.title-tag small { display: block; font-weight: 400; font-size: 0.85rem; color: var(--muted); }
+.who { font-size: 0.9rem; text-align: right; }
+.who a { color: var(--muted); margin-left: 0.6rem; white-space: nowrap; }
+
+.hint { color: var(--muted); font-size: 0.85rem; margin: 0.4rem 0 1rem; }
+
+.login {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1.4rem;
+  box-shadow: var(--shadow);
+}
+.login .row { display: flex; gap: 0.5rem; margin-top: 0.4rem; }
+.login input { flex: 1; min-width: 0; }
+
+input, select, textarea, button {
+  font: inherit;
+  color: inherit;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+}
+button { cursor: pointer; background: var(--accent); color: var(--paper); border-color: var(--accent); }
+
+.pick { display: flex; flex-wrap: wrap; gap: 0.8rem 1.2rem; }
+.pick label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; }
+.pick select { max-width: 100%; }
+
+.editors {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--card);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, "BIZ UDGothic", "D2Coding", monospace;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.tabs,
+.para {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.tabs {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+  font-size: 0.8rem;
+}
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.8rem;
+  min-width: 0;
+}
+.tab + .tab { border-left: 1px solid var(--line); }
+.tab .tag { color: var(--muted); }
+.tab .ghost { margin-left: auto; }
+.tab button + button { margin-left: 0; }
+button.small { font-size: 0.75rem; padding: 0.1rem 0.6rem; white-space: nowrap; }
+
+/* A row is one paragraph. The grid makes both sides as tall as the taller
+   one; the shorter side's text sits on the pane color and the space under
+   it shows the hatched filler, like a diff view. */
+.src,
+.dst {
+  display: grid;
+  grid-template-columns: 2.6rem 1fr;
+  align-items: start;
+  min-width: 0;
+  --filler: repeating-linear-gradient(-45deg, transparent 0 6px, var(--line) 6px 7px);
+  background: var(--filler);
+}
+.dst { border-left: 1px solid var(--line); cursor: text; }
+
+.num {
+  position: relative;
+  align-self: stretch;
+  padding: 0.6rem 0.6rem 0 0;
+  text-align: right;
+  color: var(--muted);
+  font-size: 0.75rem;
+  background: var(--card);
+  user-select: none;
+}
+.para.drafted .dst .num { box-shadow: inset -3px 0 var(--accent); }
+
+/* the row you're in, lit on both sides */
+.para.active .src pre,
+.para.active .src .num,
+.para.active .dst .num { background: var(--active); }
+.para.active .num { color: var(--ink); }
+.para:hover .src pre { background: var(--hover); }
+.para.active:hover .src pre { background: var(--active); }
+
+/* an empty translation reads as a gap to fill, not an error */
+.para.empty .dst .num { color: var(--accent); font-weight: 600; }
+
+/* a check found something: a mark in the gutter, the details on hover */
+.flag {
+  display: none;
+  position: absolute;
+  left: 0.35rem;
+  top: 0.55rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  line-height: 1.1rem;
+  text-align: center;
+  border-radius: 50%;
+  background: var(--warn);
+  color: var(--card);
+  font-weight: 700;
+  cursor: help;
+}
+.para.warn .flag { display: block; }
+
+/* copy the source in: shown on the row you're in, when it's still empty */
+.copy {
+  display: none;
+  position: absolute;
+  left: 0.2rem;
+  top: 0.5rem;
+  padding: 0 0.3rem;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+.para.active.empty .copy,
+.para.empty:hover .copy { display: block; }
+
+.src pre,
+.ed {
+  margin: 0;
+  background: var(--card);
+}
+.src pre,
+.mirror,
+.ed textarea {
+  margin: 0;
+  padding: 0.6rem 0.8rem 0.6rem 0.4rem;
+  font: inherit;
+  line-height: inherit;
+  letter-spacing: normal;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  tab-size: 4;
+}
+.src pre { color: var(--ink); }
+/* Korean breaks between words, as the site does (word-break: keep-all) */
+pre[lang='ko'],
+textarea[lang='ko'] { word-break: keep-all; }
+
+/* the editor: a highlighted copy in the flow sets the height, the textarea
+   lies on top of it with clear text, so you see the colors and type in the
+   textarea */
+.ed { position: relative; }
+.mirror { color: var(--ink); pointer-events: none; }
+.ed textarea {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  resize: none;
+  overflow: hidden;
+  outline: none;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--ink);
+}
+.ed textarea::selection { background: var(--select); color: transparent; }
+.para.active .ed { box-shadow: inset 2px 0 var(--accent); background: var(--active); }
+
+/* markdown, Typora-style: marks fade, words stay */
+.md-mark { color: var(--faint); }
+.md-heading { color: var(--accent); }
+.md-strong { color: var(--ink); text-decoration: underline; text-decoration-color: var(--line); text-decoration-thickness: 2px; }
+.md-link { color: var(--accent); }
+.md-url,
+.md-token,
+.md-code { color: var(--muted); }
+.para.code .src pre,
+.para.code .mirror { color: var(--muted); }
+
+.statusbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.3rem 1rem;
+  padding: 0.3rem 0.8rem;
+  border-top: 1px solid var(--line);
+  background: var(--paper);
+  font-size: 0.75rem;
+  color: var(--muted);
+  position: sticky;
+  bottom: 0;
+}
+button.ghost { background: transparent; color: var(--accent); }
+
+/* A phone has no room for two panes: each paragraph's source sits right
+   above its translation. */
+@media (max-width: 44rem) {
+  .tabs { grid-template-columns: 1fr; }
+  #tab-from { display: none; }
+  .tab { flex-wrap: wrap; }
+  .tab + .tab { border-left: 0; }
+  .para { grid-template-columns: 1fr; border-bottom: 1px solid var(--line); }
+  .dst { border-left: 0; border-top: 1px dashed var(--line); }
+  .src, .dst { background: var(--card); }
+  .keys { display: none; }
+}
+
+.actions { margin-top: 1.6rem; }

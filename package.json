@@ -2,10 +2,10 @@
   "name": "atfedi-de",
   "version": "0.1.0",
   "private": true,
-  "workspaces": ["catalog", "blog", "kiosk", "danro", "preview", "shared", "worker", "museum", "console", "yum", "dash"],
+  "workspaces": ["catalog", "blog", "kiosk", "danro", "preview", "shared", "worker", "museum", "console", "yum", "dash", "translate"],
   "scripts": {
     "dev": "npm run dev --workspace catalog",
-    "build": "npm run build --workspace catalog && npm run build --workspace blog && npm run build --workspace kiosk && npm run build --workspace danro && npm run build --workspace preview && npm run build --workspace museum && npm run build --workspace console && npm run build --workspace yum && npm run build --workspace dash && npm run postbuild",
+    "build": "npm run build --workspace catalog && npm run build --workspace blog && npm run build --workspace kiosk && npm run build --workspace danro && npm run build --workspace preview && npm run build --workspace museum && npm run build --workspace console && npm run build --workspace yum && npm run build --workspace dash && npm run build --workspace translate && npm run postbuild",
     "postbuild": "printf 'preview\\n' > dist/.assetsignore && cp -Rn dist/preview/client/_astro/* dist/blog/_astro/ || true",
     "check": "npm run check --workspaces --if-present",
     "deploy": "npm run build && npm run deploy --workspace worker",
@@ -17,6 +17,7 @@
     "deploy:museum": "npm run build --workspace museum && npm run postbuild && npm run deploy --workspace worker",
     "deploy:yum": "npm run build --workspace yum && npm run postbuild && npm run deploy --workspace worker",
     "deploy:console": "npm run build --workspace console && npm run postbuild && npm run deploy --workspace worker",
-    "deploy:dash": "npm run build --workspace dash && npm run postbuild && npm run deploy --workspace worker"
+    "deploy:dash": "npm run build --workspace dash && npm run postbuild && npm run deploy --workspace worker",
+    "deploy:translate": "npm run build --workspace translate && npm run postbuild && npm run deploy --workspace worker"
   }
 }

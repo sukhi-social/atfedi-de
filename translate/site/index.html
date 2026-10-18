@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>translate — atfedi.de</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" href="data:," />
+<link rel="stylesheet" href="/style.css" />
+
+<div class="desk">
+  <header>
+    <div class="title-tag">translate <small data-t="tagline"></small></div>
+    <div class="who" id="who"></div>
+  </header>
+
+  <form class="login" id="login" action="/login" method="get" hidden>
+    <label for="server" data-t="loginLabel"></label>
+    <div class="row">
+      <input id="server" name="server" placeholder="mastodon.social" autocomplete="url" required />
+      <button type="submit" data-t="loginButton"></button>
+    </div>
+    <p class="hint" data-t="loginHint"></p>
+  </form>
+
+  <nav class="pick">
+    <label><span data-t="doc"></span> <select id="doc"></select></label>
+    <label><span data-t="from"></span> <select id="from"></select></label>
+    <label><span data-t="to"></span> <select id="to"></select></label>
+  </nav>
+
+  <p class="hint" data-t="howto"></p>
+
+  <section class="editors">
+    <div class="tabs">
+      <div class="tab" id="tab-from"></div>
+      <div class="tab" id="tab-to"></div>
+    </div>
+    <div class="pane" id="pairs"></div>
+    <div class="statusbar">
+      <span id="progress"></span>
+      <span class="keys" data-t="keys"></span>
+    </div>
+  </section>
+
+  <footer class="actions">
+    <p class="hint" id="repo-path"></p>
+  </footer>
+</div>
+
+<script type="module" src="/app.js"></script>
+</html>

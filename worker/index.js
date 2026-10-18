@@ -3,6 +3,8 @@
 // Routes every request by hostname:
 //   {locale}.atfedi.de  → the catalog's {locale} subtree (static assets)
 //   blog.atfedi.de      → the blog (static assets)
+//   translate.atfedi.de → translate long-form pages paragraph by paragraph
+//   write.atfedi.de     → the same desk, for rewriting a page in your own words
 //   console.atfedi.de   → the back room: publishing, and kiosk's hand tagging
 //                         (the one host behind a login — see console/index.js)
 //   atfedi.de           → detect the browser language and redirect to a
@@ -34,6 +36,9 @@ import { handleYumFederation, backfillTick as yumBackfillTick } from './yum/fede
 import { handlePlaces } from './yum/places.js';
 import { handleYumEditor } from './yum/editor.js';
 import { handleDash } from './dash/index.js';
+import { handleTranslate } from './translate/index.js';
+import { serveDocPage, serveHome, serveSitemap } from './content/pages.js';
+import { serveMedia } from './content/store.js';
 import { serveBlogPage } from './blog/live.js';
 
 const LOCALES = ['en', 'ja', 'ko'];
@@ -118,6 +123,10 @@ export default {
     // --- {locale}.atfedi.de: serve the catalog ---
     if (LOCALES.includes(sub)) {
       let path = url.pathname;
+      // pictures in the long-form pages, from atfedi-content via R2
+      if (path.startsWith('/media/')) {
+        return (await serveMedia(env, path.slice(7))) ?? new Response('Not found', { status: 404 });
+      }
       const isSharedAsset =
         path.startsWith('/_astro/') || path === '/favicon.svg';
 
@@ -126,7 +135,18 @@ export default {
       } else {
         // a page — normalise to the trailing-slash form, then prefix the locale
         if (!path.endsWith('/') && !/\.[^/]+$/.test(path)) path += '/';
+        const page = path;
         path = `/catalog/${sub}${path}`;
+
+        // The long-form pages and the basics list come from atfedi-content
+        // (R2), rendered into shells the build left empty — content/pages.js.
+        if (page.endsWith('/doc-shell/')) return new Response('Not found', { status: 404 });
+        if (page === '/') return serveHome(request, env, url, sub, path);
+        if (page === '/sitemap.xml/' || url.pathname === '/sitemap.xml') {
+          return serveSitemap(request, env, url, sub, `/catalog/${sub}/sitemap.xml`);
+        }
+        const doc = await serveDocPage(request, env, url, sub, page);
+        if (doc) return doc;
       }
       return serveAsset(env, url, path, request);
     }
@@ -224,6 +244,12 @@ export default {
     // --- dash.atfedi.de: the front door to the back rooms ---
     if (host === 'dash.atfedi.de') {
       return handleDash(request, env, ctx);
+    }
+
+    // --- translate.atfedi.de / write.atfedi.de: the long-form desk, paragraph
+    // by paragraph. Open to any fediverse account (see translate/auth.js).
+    if (host === 'translate.atfedi.de' || host === 'write.atfedi.de') {
+      return handleTranslate(request, env, ctx);
     }
 
     // --- blog.atfedi.de: serve the blog (path-based locales) ---

@@ -1,0 +1,59 @@
+---
+import type { Locale } from '../i18n/ui';
+import { useTranslations } from '../i18n/utils';
+import Base from '../layouts/Base.astro';
+import '../styles/tool-page.css';
+
+// The frame of a long-form page, with nothing in it. The words live in the
+// atfedi-content repository and reach the site through R2; the Worker takes
+// this shell and fills it per request (worker/content/pages.js): the title,
+// the description, the article, the table of contents, and the paths in the
+// head, which here still say /doc-shell/.
+interface Props {
+  lang: Locale;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+---
+
+<Base lang={lang} title="atfedi.de">
+  <div class="tool-page-grid" data-doc-grid>
+    <article class="tool-page" data-doc-body></article>
+    <nav class="toc" aria-label={t('toc.label')} data-doc-toc></nav>
+  </div>
+</Base>
+
+<script>
+  // Keep the table of contents pointing at the section being read:
+  // the last heading that has scrolled past the top third of the screen.
+  // (Same behavior as the blog's post pages.)
+  const toc = document.querySelector('.toc');
+  if (toc !== null) {
+    const links = new Map(
+      [...toc.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')].map((a) => [
+        decodeURIComponent(a.hash.slice(1)),
+        a,
+      ]),
+    );
+    const headings = [
+      ...document.querySelectorAll<HTMLElement>('.tool-page :is(h2, h3, p)[id]'),
+    ].filter((h) => links.has(h.id));
+    let markedId: string | null = null;
+    const update = () => {
+      const line = window.innerHeight / 3;
+      let activeId: string | null = null;
+      for (const heading of headings) {
+        if (heading.getBoundingClientRect().top > line) break;
+        activeId = heading.id;
+      }
+      if (activeId === markedId) return;
+      if (markedId !== null) links.get(markedId)?.removeAttribute('aria-current');
+      if (activeId !== null) links.get(activeId)?.setAttribute('aria-current', 'location');
+      markedId = activeId;
+    };
+    document.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update, { passive: true });
+    update();
+  }
+</script>

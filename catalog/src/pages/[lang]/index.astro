@@ -25,6 +25,13 @@ const t = useTranslations(lang);
     </section>
 
     <section class="section stack">
+      <h2 class="section-title">{t('basics.heading')}</h2>
+      <p class="note"><Phrase text={t('basics.lead')} lang={lang} /></p>
+      <!-- filled per request from atfedi-content (worker/content/pages.js) -->
+      <div class="doors" data-basics></div>
+    </section>
+
+    <section class="section stack">
       <h2 class="section-title">{t('doors.heading')}</h2>
       <div class="doors">
         <a class="lane-door" data-lane="use" href="/use/">

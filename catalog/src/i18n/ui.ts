@@ -15,11 +15,16 @@ export const localeNames: Record<Locale, string> = {
 export const ui: Record<Locale, Record<string, string>> = {
   en: {
     'site.tagline':
-      'A field guide to the fediverse — tools for the people who use it, and the people who build it.',
+      'A field guide to the fediverse — the basics for getting around, and the tools we know well.',
     'intro.heading': 'What is the fediverse?',
     'intro.body':
       'The fediverse is a network of independent social platforms that all speak one protocol, ActivityPub. Accounts on different servers — and different software — can follow and talk to each other. No single company owns it.',
     'doors.heading': 'Two ways in',
+    'basics.heading': 'The basics',
+    'basics.lead': 'For when you get stuck — starting with the small things.',
+    'credits.by': 'Written by',
+    'credits.assisted': 'with help from',
+    'credits.edit': 'Rewrite this page',
     'home.headline': 'Find your way around the fediverse’s tools.',
     'home.platforms': 'New here, and still choosing a place to join? →',
     'nav.use': 'Use',
@@ -49,11 +54,16 @@ export const ui: Record<Locale, Record<string, string>> = {
   },
   ja: {
     'site.tagline':
-      'フェディバースの道しるべ — 使う人のための道具と、つくる人のための道具。',
+      'フェディバースの道しるべ — 暮らしの基本と、よく知っている道具。',
     'intro.heading': 'フェディバースって？',
     'intro.body':
       'フェディバースは、ActivityPub という共通のことばを話す、独立したSNSのあつまりです。サーバーがちがっても、ソフトがちがっても、たがいにフォローしあい、話せます。どこか一社のものではありません。',
     'doors.heading': 'ふたつの入口',
+    'basics.heading': '基本',
+    'basics.lead': 'こまったときに。小さなことから、ひとつずつ。',
+    'credits.by': '書いた人:',
+    'credits.assisted': '手伝い:',
+    'credits.edit': 'このページを書き直す',
     'home.headline': 'フェディバースの道具を、見てまわる。',
     'home.platforms': 'はじめてで、参加する場所をまだ選んでいないなら →',
     'nav.use': '使う',
@@ -83,11 +93,16 @@ export const ui: Record<Locale, Record<string, string>> = {
   },
   ko: {
     'site.tagline':
-      '페디버스 길잡이 — 쓰는 사람을 위한 도구, 만드는 사람을 위한 도구.',
+      '페디버스 길잡이 — 지내는 데 필요한 기본기와, 잘 아는 도구.',
     'intro.heading': '페디버스란?',
     'intro.body':
       '페디버스는 ActivityPub라는 공통 프로토콜을 함께 쓰는, 독립된 소셜 플랫폼이 모인 네트워크예요. 서버가 달라도 소프트웨어가 달라도 서로 팔로우하고 이야기할 수 있어요. 어느 한 회사도 페디버스를 소유하지 않아요.',
     'doors.heading': '두 개의 입구',
+    'basics.heading': '기본기',
+    'basics.lead': '곤란할 때 펼쳐 보세요. 작은 것부터 하나씩.',
+    'credits.by': '쓴 사람:',
+    'credits.assisted': '도움:',
+    'credits.edit': '이 페이지 다시 쓰기',
     'home.headline': '페디버스 도우미 둘러보기',
     'home.platforms': '페디버스가 처음이라, 아직 가입할 곳을 고르는 중이라면 →',
     'nav.use': '쓰기',
