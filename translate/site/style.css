@@ -1,0 +1,112 @@
+/* Same clothes as the other back rooms (dash, yum editor): soft and plain. */
+
+:root {
+  --ink: #4a4640;
+  --muted: #8a847a;
+  --paper: #fbf9f5;
+  --card: #ffffff;
+  --line: #e7e1d6;
+  --accent: #2f6d5a;
+  --shadow: 0 2px 12px rgba(74, 70, 64, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e8e3da;
+    --muted: #a39d92;
+    --paper: #1f1e1b;
+    --card: #2a2925;
+    --line: #3b3934;
+    --accent: #7cc2aa;
+    --shadow: none;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  font-family: "Hiragino Maru Gothic ProN", "Apple SD Gothic Neo", system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.7;
+}
+
+.desk {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+
+header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.4rem;
+}
+
+.title-tag { font-size: 1.1rem; font-weight: 600; }
+.title-tag small { display: block; font-weight: 400; font-size: 0.85rem; color: var(--muted); }
+.who { font-size: 0.9rem; text-align: right; }
+.who a { color: var(--muted); margin-left: 0.6rem; white-space: nowrap; }
+
+.hint { color: var(--muted); font-size: 0.85rem; margin: 0.4rem 0 1rem; }
+
+.login {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1.4rem;
+  box-shadow: var(--shadow);
+}
+.login .row { display: flex; gap: 0.5rem; margin-top: 0.4rem; }
+.login input { flex: 1; min-width: 0; }
+
+input, select, textarea, button {
+  font: inherit;
+  color: inherit;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+}
+button { cursor: pointer; background: var(--accent); color: var(--paper); border-color: var(--accent); }
+
+.pick { display: flex; flex-wrap: wrap; gap: 0.8rem 1.2rem; }
+.pick label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; }
+.pick select { max-width: 100%; }
+
+.pairs { list-style: none; padding: 0; margin: 0; }
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+  padding: 0.8rem 0;
+  border-top: 1px solid var(--line);
+}
+@media (max-width: 44rem) {
+  .pair { grid-template-columns: 1fr; }
+}
+
+.source {
+  margin: 0;
+  font-family: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.95rem;
+}
+.source.code { font-family: ui-monospace, monospace; font-size: 0.85rem; color: var(--muted); }
+
+.target textarea {
+  width: 100%;
+  min-height: 4.5rem;
+  resize: vertical;
+  line-height: 1.6;
+}
+.mark { font-size: 0.75rem; color: var(--muted); }
+.mark.saved { color: var(--accent); }
+
+.actions { margin-top: 1.6rem; }

@@ -3,6 +3,7 @@
 // Routes every request by hostname:
 //   {locale}.atfedi.de  → the catalog's {locale} subtree (static assets)
 //   blog.atfedi.de      → the blog (static assets)
+//   translate.atfedi.de → translate long-form pages paragraph by paragraph
 //   console.atfedi.de   → the back room: publishing, and kiosk's hand tagging
 //                         (the one host behind a login — see console/index.js)
 //   atfedi.de           → detect the browser language and redirect to a
@@ -34,6 +35,7 @@ import { handleYumFederation, backfillTick as yumBackfillTick } from './yum/fede
 import { handlePlaces } from './yum/places.js';
 import { handleYumEditor } from './yum/editor.js';
 import { handleDash } from './dash/index.js';
+import { handleTranslate } from './translate/index.js';
 import { serveBlogPage } from './blog/live.js';
 
 const LOCALES = ['en', 'ja', 'ko'];
@@ -224,6 +226,12 @@ export default {
     // --- dash.atfedi.de: the front door to the back rooms ---
     if (host === 'dash.atfedi.de') {
       return handleDash(request, env, ctx);
+    }
+
+    // --- translate.atfedi.de: translate the long-form pages, paragraph by
+    // paragraph. Open to any fediverse account (see translate/auth.js).
+    if (host === 'translate.atfedi.de') {
+      return handleTranslate(request, env);
     }
 
     // --- blog.atfedi.de: serve the blog (path-based locales) ---

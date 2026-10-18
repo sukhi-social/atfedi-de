@@ -45,6 +45,9 @@
     // host sits behind a sukhi login (see console/index.js).
     { "pattern": "console.atfedi.de", "custom_domain": true },
     // The front door to the back rooms — its own sukhi login (see dash/index.js).
-    { "pattern": "dash.atfedi.de", "custom_domain": true }
+    { "pattern": "dash.atfedi.de", "custom_domain": true },
+    // Translating the long-form pages — open to any fediverse account (see
+    // translate/auth.js). Needs worker/translate/schema.sql applied once.
+    { "pattern": "translate.atfedi.de", "custom_domain": true }
   ]
 }
