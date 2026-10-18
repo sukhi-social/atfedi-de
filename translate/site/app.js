@@ -4,6 +4,8 @@
 // (when signed in), and "Download" puts the right pane back together as a
 // markdown file.
 
+import { paragraphs, isFence, highlight, check } from './markdown.js';
+
 const LANGS = ['ko', 'ja', 'en'];
 const LANG_NAMES = { en: 'English', ja: '日本語', ko: '한국어' };
 
@@ -22,6 +24,18 @@ const STRINGS = {
     saving: 'saving…', saved: 'saved',
     notSaved: "couldn't save",
     signInToSave: 'Sign in to keep drafts. You can still download what you write.',
+    progress: (done, total) => `${done} / ${total} translated`,
+    warnings: (n) => `${n} to check`,
+    nextEmpty: 'Next untranslated',
+    copySource: 'Copy the source',
+    keys: 'Alt+↑↓ move between paragraphs · Ctrl+Enter next untranslated · Ctrl+Shift+Enter copy the source in',
+    checks: {
+      url: (d) => `A link from the source is missing: ${d}`,
+      icon: (d) => `An icon from the source is missing: ${d}`,
+      code: (d) => `Code from the source is missing: ${d}`,
+      heading: (d) => `Heading level differs (source / yours): ${d}`,
+      items: (d) => `List items differ (source / yours): ${d}`,
+    },
   },
   ja: {
     tagline: 'atfedi.de を、一段落ずつ訳す',
@@ -37,6 +51,18 @@ const STRINGS = {
     saving: '保存中…', saved: '保存しました',
     notSaved: '保存できませんでした',
     signInToSave: 'ログインすると下書きが残ります。ダウンロードはログインなしでもできます。',
+    progress: (done, total) => `${total} 段落中 ${done} 訳済み`,
+    warnings: (n) => `確認 ${n}`,
+    nextEmpty: '次の未訳へ',
+    copySource: '原文を写す',
+    keys: 'Alt+↑↓ 段落を移動 · Ctrl+Enter 次の未訳へ · Ctrl+Shift+Enter 原文を写す',
+    checks: {
+      url: (d) => `原文のリンクが見当たりません: ${d}`,
+      icon: (d) => `原文のアイコンが見当たりません: ${d}`,
+      code: (d) => `原文のコードが見当たりません: ${d}`,
+      heading: (d) => `見出しの深さがちがいます(原文 / 訳): ${d}`,
+      items: (d) => `箇条書きの数がちがいます(原文 / 訳): ${d}`,
+    },
   },
   ko: {
     tagline: 'atfedi.de를 문단 하나씩 번역해요',
@@ -52,6 +78,18 @@ const STRINGS = {
     saving: '저장 중…', saved: '저장했어요',
     notSaved: '저장하지 못했어요',
     signInToSave: '로그인하면 초안이 남아요. 내려받기는 로그인 없이도 돼요.',
+    progress: (done, total) => `${total}개 중 ${done}개 번역`,
+    warnings: (n) => `확인 ${n}`,
+    nextEmpty: '다음 빈 문단',
+    copySource: '원문 복사',
+    keys: 'Alt+↑↓ 문단 이동 · Ctrl+Enter 다음 빈 문단 · Ctrl+Shift+Enter 원문 복사해 넣기',
+    checks: {
+      url: (d) => `원문의 링크가 빠졌어요: ${d}`,
+      icon: (d) => `원문의 아이콘이 빠졌어요: ${d}`,
+      code: (d) => `원문의 코드가 빠졌어요: ${d}`,
+      heading: (d) => `제목 단계가 달라요 (원문 / 번역): ${d}`,
+      items: (d) => `목록 항목 수가 달라요 (원문 / 번역): ${d}`,
+    },
   },
 };
 
@@ -66,42 +104,6 @@ const el = (tag, props = {}, ...children) => {
   node.append(...children);
   return node;
 };
-
-// --- paragraphs --------------------------------------------------------------
-
-// Split markdown into paragraphs at blank lines, keeping fenced blocks
-// (``` code, ::: cards) whole even when they contain blank lines.
-export function paragraphs(markdown) {
-  const blocks = [];
-  let current = [];
-  let fence = null;
-  const flush = () => {
-    if (current.length) blocks.push(current.join('\n'));
-    current = [];
-  };
-  for (const line of markdown.replace(/\r\n/g, '\n').split('\n')) {
-    const open = line.match(/^(```|:::)/);
-    if (fence) {
-      current.push(line);
-      if (line.trim() === fence) {
-        fence = null;
-        flush();
-      }
-    } else if (open) {
-      flush();
-      fence = open[1];
-      current.push(line);
-    } else if (line.trim() === '') {
-      flush();
-    } else {
-      current.push(line);
-    }
-  }
-  flush();
-  return blocks;
-}
-
-const isCode = (block) => /^(```|:::)/.test(block ?? '');
 
 // --- state -----------------------------------------------------------------
 
@@ -161,8 +163,20 @@ function fillLangs(doc) {
 // CSS grid, so a row is as tall as its taller side and the shorter side shows
 // a hatched filler under its text. Nothing is boxed; the panes read as two
 // continuous documents.
+//
+// What helps with comparing and fixing, borrowed from translation tools and
+// editors:
+//   - the row you're in is lit on both sides, so your eye finds its source
+//   - markdown marks are faded and the words are not (Typora); the right
+//     side does this by laying a highlighted copy under a clear textarea
+//   - keys to step between paragraphs and jump to the next empty one, and
+//     one to copy the source in when most of it stays (code, a list of links)
+//   - a quiet check for links, icons, code, heading level and list items the
+//     source has but the translation lost, shown in the gutter
+//   - a running count of what's translated and what's worth a second look
 
 const saveTimers = new Map();
+let rows = [];
 
 async function saveDraft(doc, lang, idx, text, row) {
   if (!me) return;
@@ -175,23 +189,11 @@ async function saveDraft(doc, lang, idx, text, row) {
       body: JSON.stringify({ doc, lang, idx, text }),
     });
     status.textContent = s.saved;
-    row.classList.toggle('drafted', text.trim() !== '');
+    row.el.classList.toggle('drafted', text.trim() !== '');
   } catch {
     status.textContent = s.notSaved;
   }
 }
-
-// A textarea as tall as its text: the grid row does the rest.
-function fit(box) {
-  box.style.height = 'auto';
-  box.style.height = `${box.scrollHeight}px`;
-}
-
-let resizeTimer;
-addEventListener('resize', () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => document.querySelectorAll('.dst textarea').forEach(fit), 150);
-});
 
 const loadDrafts = (doc, lang) =>
   me
@@ -199,6 +201,68 @@ const loadDrafts = (doc, lang) =>
         .then((r) => r.drafts)
         .catch(() => ({}))
     : Promise.resolve({});
+
+// The highlighted copy under the textarea; the trailing newline keeps an
+// ending blank line from collapsing, so the heights always agree.
+function paint(row) {
+  row.mirror.innerHTML = `${highlight(row.box.value)}\n`;
+}
+
+function review(row) {
+  const issues = check(row.src, row.box.value);
+  row.el.classList.toggle('warn', issues.length > 0);
+  row.flag.title = issues.map((i) => s.checks[i.kind](i.detail)).join('\n');
+  row.el.classList.toggle('empty', !row.box.value.trim());
+  tally();
+}
+
+function tally() {
+  const done = rows.filter((r) => r.box.value.trim()).length;
+  const warn = rows.filter((r) => r.el.classList.contains('warn')).length;
+  $('progress').textContent = `${s.progress(done, rows.length)}${warn ? ` · ${s.warnings(warn)}` : ''}`;
+}
+
+function focusRow(i, atEnd = false) {
+  const row = rows[i];
+  if (!row) return;
+  row.box.focus();
+  if (atEnd) row.box.setSelectionRange(row.box.value.length, row.box.value.length);
+  row.el.scrollIntoView({ block: 'nearest' });
+}
+
+const nextEmpty = (from) => {
+  for (let k = 1; k <= rows.length; k++) {
+    const i = (from + k) % rows.length;
+    if (!rows[i].box.value.trim()) return i;
+  }
+  return -1;
+};
+
+function copySource(row) {
+  if (row.src == null) return;
+  row.box.focus();
+  row.box.select();
+  // execCommand keeps the browser's undo history; fall back to assignment
+  if (!document.execCommand('insertText', false, row.src)) {
+    row.box.value = row.src;
+    row.box.dispatchEvent(new Event('input'));
+  }
+}
+
+function onKey(e, row) {
+  const mod = e.ctrlKey || e.metaKey;
+  if (e.altKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+    e.preventDefault();
+    focusRow(row.idx + (e.key === 'ArrowDown' ? 1 : -1), true);
+  } else if (mod && e.shiftKey && e.key === 'Enter') {
+    e.preventDefault();
+    copySource(row);
+  } else if (mod && e.key === 'Enter') {
+    e.preventDefault();
+    const i = nextEmpty(row.idx);
+    if (i >= 0) focusRow(i);
+  }
+}
 
 async function renderPairs() {
   const doc = docs.find((d) => d.doc === $('doc').value);
@@ -214,20 +278,27 @@ async function renderPairs() {
   ]);
   const left = paragraphs(source ?? '');
   const right = paragraphs(target ?? '');
-  const rows = Math.max(left.length, right.length);
+  const count = Math.max(left.length, right.length);
   const name = doc.doc.split('/').pop();
 
   $('tab-from').replaceChildren(`${name}.${from}.md`, el('span', { className: 'tag', textContent: s.readOnly }));
+  const jump = el('button', { type: 'button', className: 'small ghost', textContent: s.nextEmpty });
+  jump.addEventListener('click', () => {
+    const at = rows.findIndex((r) => r.el.classList.contains('active'));
+    const i = nextEmpty(at < 0 ? -1 : at);
+    if (i >= 0) focusRow(i);
+  });
   $('tab-to').replaceChildren(
     `${name}.${to}.md`,
     el('span', { className: 'tag', id: 'status' }),
+    jump,
     downloadButton(to),
   );
 
   const pane = $('pairs');
   pane.replaceChildren();
-  const boxes = [];
-  for (let idx = 0; idx < rows; idx++) {
+  rows = [];
+  for (let idx = 0; idx < count; idx++) {
     const src = left[idx];
     const draft = drafts[idx];
     const box = el('textarea', {
@@ -237,38 +308,51 @@ async function renderPairs() {
       spellcheck: true,
       ariaLabel: `${LANG_NAMES[to]} ${idx + 1}`,
     });
-    const row = el(
+    const mirror = el('pre', { className: 'mirror', ariaHidden: 'true' });
+    const flag = el('span', { className: 'flag', textContent: '!' });
+    const copy = el('button', { type: 'button', className: 'copy', textContent: '⇥', title: s.copySource, tabIndex: -1 });
+    const srcPre = el('pre', { lang: from });
+    srcPre.innerHTML = highlight(src ?? '');
+    const rowEl = el(
       'div',
-      { className: `para${draft != null ? ' drafted' : ''}${isCode(src) ? ' code' : ''}` },
+      { className: `para${draft != null ? ' drafted' : ''}${isFence(src) ? ' code' : ''}` },
+      el('div', { className: 'src' }, el('span', { className: 'num', textContent: String(idx + 1) }), srcPre),
       el(
         'div',
-        { className: 'src' },
-        el('span', { className: 'num', textContent: String(idx + 1) }),
-        el('pre', { textContent: src ?? '', lang: from }),
+        { className: 'dst' },
+        el('span', { className: 'num' }, String(idx + 1), flag, copy),
+        el('div', { className: 'ed' }, mirror, box),
       ),
-      el('div', { className: 'dst' }, el('span', { className: 'num', textContent: String(idx + 1) }), box),
     );
-    // the filler under a short paragraph still belongs to it
-    row.querySelector('.dst').addEventListener('mousedown', (e) => {
-      if (e.target === box) return;
+    const row = { idx, src, box, mirror, flag, el: rowEl };
+    rows.push(row);
+
+    // the filler under a short paragraph, and the source beside it, still
+    // belong to it: a click there puts you in this paragraph
+    rowEl.addEventListener('mousedown', (e) => {
+      if (e.target === box || e.target === copy || window.getSelection()?.toString()) return;
+      if (e.target.closest('.src pre')) return; // let the source be selected and copied
       e.preventDefault();
-      box.focus();
-      box.setSelectionRange(box.value.length, box.value.length);
+      focusRow(idx, true);
     });
-    const key = `${to}:${idx}`;
-    box.addEventListener('input', () => {
-      fit(box);
-      clearTimeout(saveTimers.get(key));
-      saveTimers.set(key, setTimeout(() => saveDraft(doc.doc, to, idx, box.value, row), 1200));
-    });
+    copy.addEventListener('click', () => copySource(row));
+    box.addEventListener('focus', () => rowEl.classList.add('active'));
     box.addEventListener('blur', () => {
-      clearTimeout(saveTimers.get(key));
+      rowEl.classList.remove('active');
+      clearTimeout(saveTimers.get(idx));
       saveDraft(doc.doc, to, idx, box.value, row);
     });
-    pane.append(row);
-    boxes.push(box);
+    box.addEventListener('keydown', (e) => onKey(e, row));
+    box.addEventListener('input', () => {
+      paint(row);
+      review(row);
+      clearTimeout(saveTimers.get(idx));
+      saveTimers.set(idx, setTimeout(() => saveDraft(doc.doc, to, idx, box.value, row), 1200));
+    });
+    paint(row);
+    pane.append(rowEl);
   }
-  boxes.forEach(fit);
+  rows.forEach(review);
 
   const repoPath = doc.repoPath[to] ?? doc.repoPath[from].replace(`.${from}.md`, `.${to}.md`);
   $('repo-path').textContent = `${s.goesTo(repoPath)}${me ? '' : ` ${s.signInToSave}`}`;
@@ -280,7 +364,7 @@ function downloadButton(lang) {
   button.addEventListener('click', () => {
     const doc = $('doc').value;
     const text =
-      [...document.querySelectorAll('.dst textarea')]
+      rows.map((r) => r.box)
         .map((t) => t.value.trim())
         .filter(Boolean)
         .join('\n\n') + '\n';
