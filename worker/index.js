@@ -36,6 +36,7 @@ import { handlePlaces } from './yum/places.js';
 import { handleYumEditor } from './yum/editor.js';
 import { handleDash } from './dash/index.js';
 import { handleTranslate } from './translate/index.js';
+import { serveDocPage, serveHome, serveSitemap } from './content/pages.js';
 import { serveBlogPage } from './blog/live.js';
 
 const LOCALES = ['en', 'ja', 'ko'];
@@ -128,7 +129,18 @@ export default {
       } else {
         // a page — normalise to the trailing-slash form, then prefix the locale
         if (!path.endsWith('/') && !/\.[^/]+$/.test(path)) path += '/';
+        const page = path;
         path = `/catalog/${sub}${path}`;
+
+        // The long-form pages and the basics list come from atfedi-content
+        // (R2), rendered into shells the build left empty — content/pages.js.
+        if (page.endsWith('/doc-shell/')) return new Response('Not found', { status: 404 });
+        if (page === '/') return serveHome(request, env, url, sub, path);
+        if (page === '/sitemap.xml/' || url.pathname === '/sitemap.xml') {
+          return serveSitemap(request, env, url, sub, `/catalog/${sub}/sitemap.xml`);
+        }
+        const doc = await serveDocPage(request, env, url, sub, page);
+        if (doc) return doc;
       }
       return serveAsset(env, url, path, request);
     }

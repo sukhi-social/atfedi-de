@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
 import { locales } from '../../i18n/ui';
-import { basicSlugs } from '../../lib/basics';
 
 // One sitemap per locale — the Worker serves /{lang}/sitemap.xml as
 // {lang}.atfedi.de/sitemap.xml, so each lists only its own host's pages.
@@ -12,13 +11,9 @@ const pages = [
   '/',
   '/use/',
   '/build/',
-  '/build/fedify/',
-  '/build/fedify/roadmap/',
-  '/build/fedify/feels-good/',
-  '/build/fedify/watch-out/',
-  '/build/fedify/running/',
-  ...basicSlugs.map((slug) => `/basics/${slug}/`),
 ];
+// The long-form pages (basics, tool guides) come from atfedi-content; the
+// Worker adds them before </urlset> (worker/content/pages.js).
 
 export const GET: APIRoute = ({ params }) => {
   const urls = pages

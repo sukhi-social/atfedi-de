@@ -1,0 +1,12 @@
+---
+import { locales, type Locale } from '../../../i18n/ui';
+import DocShell from '../../../components/DocShell.astro';
+
+// The shell for tool guides under /build/ (the nav marks Build as current) —
+// see components/DocShell.
+export function getStaticPaths() {
+  return locales.map((lang) => ({ params: { lang } }));
+}
+---
+
+<DocShell lang={Astro.params.lang as Locale} />

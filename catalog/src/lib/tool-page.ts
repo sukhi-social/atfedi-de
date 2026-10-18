@@ -14,22 +14,12 @@ import { micromark } from 'micromark';
 
 // ---- icons ---------------------------------------------------------------
 
-const iconFiles = import.meta.glob('../assets/lucide/*.svg', {
-  query: '?raw',
-  import: 'default',
-  eager: true,
-}) as Record<string, string>;
+// Icons arrive as a name → svg map, so this file runs anywhere: the Astro
+// build passes the bundled Lucide files (lib/icons.ts), the Worker passes the
+// same map fetched from the built site (/icons.json).
+export type IconMap = Record<string, string>;
 
-const icons = new Map(
-  Object.entries(iconFiles).map(([path, svg]) => [
-    path.replace(/.*\/([a-z0-9-]+)\.svg$/, '$1'),
-    svg
-      .replace(/<!--[\s\S]*?-->\s*/g, '') // lucide-static license comment
-      .replace(' class="lucide', ' data-lucide="')
-      .replace('<svg', '<svg class="i" aria-hidden="true"')
-      .trim(),
-  ]),
-);
+let icons = new Map<string, string>();
 
 const icon = (name: string): string => icons.get(name) ?? '';
 
@@ -181,7 +171,8 @@ export interface ToolPage {
   tagline: string;
 }
 
-export const renderToolPage = (markdown: string, kicker: string): ToolPage => {
+export const renderToolPage = (markdown: string, kicker: string, iconMap: IconMap): ToolPage => {
+  icons = new Map(Object.entries(iconMap));
   // Lift card fences out before micromark, drop rendered HTML back in after.
   const fences: string[] = [];
   const body = markdown.replace(/:::(cards|card)\n([\s\S]*?)\n:::/g, (_, type, md) => {

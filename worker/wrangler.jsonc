@@ -21,6 +21,12 @@
       "database_id": "cc7aa6fb-dfa0-4461-88fd-358f07d75b05"
     }
   ],
+  // The long-form writing (basics, tool guides), mirrored here from the
+  // atfedi-content repository on every merge to its main. The catalog and
+  // translate.atfedi.de read it per request (content/).
+  "r2_buckets": [
+    { "binding": "CONTENT", "bucket_name": "atfedi-content" }
+  ],
   // Where publishing verifies a writer's identity (sukhi's Mastodon-compatible
   // OAuth2). Public, not a secret.
   "vars": {

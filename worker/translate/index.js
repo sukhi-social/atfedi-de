@@ -1,13 +1,14 @@
 // translate.atfedi.de — a desk for translating the long-form pages paragraph
 // by paragraph: the source on the left, your language on the right.
 //
-// The pages themselves are static (translate/ builds them, with every source
-// markdown file and an index, into dist/translate/). The Worker adds only the
-// login (any fediverse account — see auth.js) and each person's drafts.
-// Reading needs no login; saving a draft does.
+// The desk itself is static (translate/site). The pages it offers come from
+// atfedi-content through R2 (/docs.json, /content/...), the same copy the
+// site reads. The Worker adds the login (any fediverse account — see auth.js)
+// and each person's drafts. Reading needs no login; saving a draft does.
 
 import { handleLogin, handleCallback, handleLogout, sessionHandle } from './auth.js';
 import { listDrafts, putDraft } from './store.js';
+import { contentIndex, contentFile } from '../content/store.js';
 
 const LANGS = new Set(['en', 'ja', 'ko']);
 const MAX_PARAGRAPH = 20000;
@@ -29,6 +30,25 @@ export async function handleTranslate(request, env) {
   if (path === '/login') return handleLogin(request, env);
   if (path === '/callback') return handleCallback(request, env);
   if (path === '/logout') return handleLogout(request, env);
+
+  if (path === '/docs.json') {
+    const index = await contentIndex(env);
+    const docs = index.docs.map((d) => ({
+      doc: d.doc,
+      title: d.title,
+      repoPath: Object.fromEntries(Object.entries(d.files).map(([lang, f]) => [lang, f.path])),
+    }));
+    return json(docs);
+  }
+
+  const file = path.match(/^\/content\/(.+)\.([a-z]{2})\.md$/);
+  if (file) {
+    const text = await contentFile(env, file[1], file[2]);
+    if (text === null) return new Response('Not found', { status: 404 });
+    return new Response(text, {
+      headers: { 'content-type': 'text/markdown; charset=utf-8', 'cache-control': 'no-cache' },
+    });
+  }
 
   if (path === '/api/me') {
     return json({ handle: await sessionHandle(request, env) });
