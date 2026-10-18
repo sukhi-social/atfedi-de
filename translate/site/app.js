@@ -1,6 +1,7 @@
-// translate.atfedi.de — the source on the left, your language on the right,
-// one paragraph per row. Drafts save as you leave each box (when signed in);
-// "Download" puts the right column back together as a markdown file.
+// translate.atfedi.de — two editors side by side, the source language on the
+// left and yours on the right, split into paragraphs so each row lines up.
+// Both sides are editable; drafts save as you type (when signed in), and each
+// column's "Download" puts it back together as a markdown file.
 
 const LANGS = ['ko', 'ja', 'en'];
 const LANG_NAMES = { en: 'English', ja: '日本語', ko: '한국어' };
@@ -12,8 +13,8 @@ const STRINGS = {
     loginButton: 'Sign in',
     loginHint: 'Mastodon, Misskey, GoToSocial, and most others work. We only read your account name.',
     doc: 'Page', from: 'From', to: 'Into',
-    howto: "Rows line up by paragraph, but they don't have to match word for word. Write it the way your language would say it.",
-    download: 'Download the translation',
+    howto: "Both sides are editable, and each row is one paragraph. They don't have to match word for word. Write it the way your language would say it.",
+    download: 'Download',
     goesTo: (p) => `It goes to ${p} in the repository.`,
     signedIn: 'Signed in as', logout: 'Sign out',
     mine: 'your draft', live: 'on the site now', saving: 'saving…', saved: 'saved',
@@ -26,8 +27,8 @@ const STRINGS = {
     loginButton: 'ログイン',
     loginHint: 'Mastodon、Misskey、GoToSocial など、たいていのサーバーで使えます。読むのはアカウント名だけ。',
     doc: 'ページ', from: '原文', to: '訳す先',
-    howto: '段落ごとに並べていますが、一語ずつ合わせなくて大丈夫。その言語らしい言い方で。',
-    download: '訳をダウンロード',
+    howto: '左右どちらも書きかえられます。一行が一段落。一語ずつ合わせなくて大丈夫。その言語らしい言い方で。',
+    download: 'ダウンロード',
     goesTo: (p) => `リポジトリの ${p} に置くものです。`,
     signedIn: 'ログイン中', logout: 'ログアウト',
     mine: 'わたしの下書き', live: 'いまのサイト', saving: '保存中…', saved: '保存しました',
@@ -40,8 +41,8 @@ const STRINGS = {
     loginButton: '로그인',
     loginHint: '마스토돈, Misskey, GoToSocial 등 대부분의 서버에서 돼요. 읽는 건 계정 이름뿐이에요.',
     doc: '페이지', from: '원문', to: '옮길 언어',
-    howto: '문단별로 나란히 놓았지만, 한 단어씩 맞출 필요는 없어요. 그 언어다운 말투로 써 주세요.',
-    download: '번역 내려받기',
+    howto: '양쪽 모두 고칠 수 있고, 한 줄이 한 문단이에요. 한 단어씩 맞출 필요는 없어요. 그 언어다운 말투로 써 주세요.',
+    download: '내려받기',
     goesTo: (p) => `저장소의 ${p}에 들어갈 파일이에요.`,
     signedIn: '로그인:', logout: '로그아웃',
     mine: '내 초안', live: '지금 사이트', saving: '저장 중…', saved: '저장했어요',
@@ -96,7 +97,7 @@ export function paragraphs(markdown) {
   return blocks;
 }
 
-const isCode = (block) => /^(```|:::)/.test(block);
+const isCode = (block) => /^(```|:::)/.test(block ?? '');
 
 // --- state -----------------------------------------------------------------
 
@@ -151,7 +152,7 @@ function fillLangs(doc) {
 
 // --- the rows ----------------------------------------------------------------
 
-let saveTimers = new Map();
+const saveTimers = new Map();
 
 async function saveDraft(doc, lang, idx, text, mark) {
   if (!me) return;
@@ -170,6 +171,59 @@ async function saveDraft(doc, lang, idx, text, mark) {
   }
 }
 
+// Both boxes in a row take the taller one's height, so the two columns stay
+// level paragraph by paragraph. (On a phone the columns stack, so each box
+// just fits itself.)
+const sideBySide = matchMedia('(min-width: 44rem)');
+
+function level(boxes) {
+  for (const b of boxes) b.style.height = 'auto';
+  if (!sideBySide.matches) {
+    for (const b of boxes) b.style.height = `${b.scrollHeight + 2}px`;
+    return;
+  }
+  const h = Math.max(...boxes.map((b) => b.scrollHeight)) + 2;
+  for (const b of boxes) b.style.height = `${h}px`;
+}
+
+const levelAll = () => {
+  for (const row of document.querySelectorAll('.pair')) level([...row.querySelectorAll('textarea')]);
+};
+let resizeTimer;
+addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(levelAll, 150);
+});
+sideBySide.addEventListener('change', levelAll);
+
+// One editable side of a row: starts from my draft, else what's on the site.
+function side(doc, lang, idx, live, draft) {
+  const mark = el('span', {
+    className: 'mark',
+    textContent: draft != null ? s.mine : live != null ? s.live : '',
+  });
+  const box = el('textarea', { value: draft ?? live ?? '', lang, rows: 1 });
+  box.dataset.lang = lang;
+  if (isCode(box.value)) box.classList.add('code');
+  const key = `${lang}:${idx}`;
+  box.addEventListener('input', () => {
+    clearTimeout(saveTimers.get(key));
+    saveTimers.set(key, setTimeout(() => saveDraft(doc, lang, idx, box.value, mark), 1200));
+  });
+  box.addEventListener('blur', () => {
+    clearTimeout(saveTimers.get(key));
+    saveDraft(doc, lang, idx, box.value, mark);
+  });
+  return { box, cell: el('div', { className: 'side' }, box, mark) };
+}
+
+const loadDrafts = (doc, lang) =>
+  me
+    ? getJson(`/api/drafts?doc=${encodeURIComponent(doc)}&lang=${lang}`)
+        .then((r) => r.drafts)
+        .catch(() => ({}))
+    : Promise.resolve({});
+
 async function renderPairs() {
   const doc = docs.find((d) => d.doc === $('doc').value);
   if (!doc) return;
@@ -177,67 +231,57 @@ async function renderPairs() {
   const to = $('to').value;
   writeHash();
 
-  const [source, target, drafts] = await Promise.all([
+  const [source, target, fromDrafts, toDrafts] = await Promise.all([
     getText(`/content/${doc.doc}.${from}.md`),
     doc.title[to] ? getText(`/content/${doc.doc}.${to}.md`) : null,
-    me ? getJson(`/api/drafts?doc=${encodeURIComponent(doc.doc)}&lang=${to}`).then((r) => r.drafts).catch(() => ({})) : {},
+    loadDrafts(doc.doc, from),
+    loadDrafts(doc.doc, to),
   ]);
   const left = paragraphs(source ?? '');
   const right = paragraphs(target ?? '');
   const rows = Math.max(left.length, right.length);
 
   const list = $('pairs');
-  list.replaceChildren();
+  list.replaceChildren(
+    el(
+      'li',
+      { className: 'pair head' },
+      el('div', {}, `${s.from} · ${LANG_NAMES[from]} `, downloadButton(from)),
+      el('div', {}, `${s.to} · ${LANG_NAMES[to]} `, downloadButton(to)),
+    ),
+  );
   for (let idx = 0; idx < rows; idx++) {
-    const src = left[idx];
-    const draft = drafts[idx];
-    const live = right[idx];
-    const mark = el('span', {
-      className: 'mark',
-      textContent: draft != null ? s.mine : live != null ? s.live : '',
-    });
-    const box = el('textarea', { value: draft ?? live ?? '', lang: to });
-    box.rows = Math.min(14, Math.max(3, Math.ceil((src ?? live ?? '').length / 60)));
-    box.addEventListener('input', () => {
-      clearTimeout(saveTimers.get(idx));
-      saveTimers.set(idx, setTimeout(() => saveDraft(doc.doc, to, idx, box.value, mark), 1200));
-    });
-    box.addEventListener('blur', () => {
-      clearTimeout(saveTimers.get(idx));
-      saveDraft(doc.doc, to, idx, box.value, mark);
-    });
-    list.append(
-      el(
-        'li',
-        { className: 'pair' },
-        el('pre', {
-          className: src != null && isCode(src) ? 'source code' : 'source',
-          textContent: src ?? s.extra,
-          lang: from,
-        }),
-        el('div', { className: 'target' }, box, mark),
-      ),
-    );
+    const a = side(doc.doc, from, idx, left[idx], fromDrafts[idx]);
+    const b = side(doc.doc, to, idx, right[idx], toDrafts[idx]);
+    if (left[idx] == null) a.box.placeholder = s.extra;
+    const boxes = [a.box, b.box];
+    for (const box of boxes) box.addEventListener('input', () => level(boxes));
+    list.append(el('li', { className: 'pair' }, a.cell, b.cell));
   }
+  levelAll();
 
   const repoPath = doc.repoPath[to] ?? doc.repoPath[from].replace(`.${from}.md`, `.${to}.md`);
   $('repo-path').textContent = `${s.goesTo(repoPath)}${me ? '' : ` ${s.signInToSave}`}`;
 }
 
-function download() {
-  const doc = $('doc').value;
-  const to = $('to').value;
-  const text =
-    [...document.querySelectorAll('.target textarea')]
-      .map((t) => t.value.trim())
-      .filter(Boolean)
-      .join('\n\n') + '\n';
-  const a = el('a', {
-    href: URL.createObjectURL(new Blob([text], { type: 'text/markdown' })),
-    download: `${doc.split('/').pop()}.${to}.md`,
+// The column for `lang`, put back together as one markdown file.
+function downloadButton(lang) {
+  const button = el('button', { type: 'button', className: 'small', textContent: s.download });
+  button.addEventListener('click', () => {
+    const doc = $('doc').value;
+    const text =
+      [...document.querySelectorAll(`.pair textarea[data-lang="${lang}"]`)]
+        .map((t) => t.value.trim())
+        .filter(Boolean)
+        .join('\n\n') + '\n';
+    const a = el('a', {
+      href: URL.createObjectURL(new Blob([text], { type: 'text/markdown' })),
+      download: `${doc.split('/').pop()}.${lang}.md`,
+    });
+    a.click();
+    URL.revokeObjectURL(a.href);
   });
-  a.click();
-  URL.revokeObjectURL(a.href);
+  return button;
 }
 
 // --- start -------------------------------------------------------------------
@@ -265,7 +309,6 @@ async function start() {
   });
   $('from').addEventListener('change', renderPairs);
   $('to').addEventListener('change', renderPairs);
-  $('download').addEventListener('click', download);
   await renderPairs();
 }
 

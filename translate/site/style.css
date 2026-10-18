@@ -91,21 +91,26 @@ button { cursor: pointer; background: var(--accent); color: var(--paper); border
   .pair { grid-template-columns: 1fr; }
 }
 
-.source {
-  margin: 0;
-  font-family: inherit;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font-size: 0.95rem;
+.pair.head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--paper);
+  font-size: 0.85rem;
+  color: var(--muted);
+  padding: 0.5rem 0;
 }
-.source.code { font-family: ui-monospace, monospace; font-size: 0.85rem; color: var(--muted); }
+.pair.head > div { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+button.small { font-size: 0.8rem; padding: 0.15rem 0.6rem; }
 
-.target textarea {
+.side textarea {
+  display: block;
   width: 100%;
-  min-height: 4.5rem;
-  resize: vertical;
+  resize: none;
+  overflow: hidden;
   line-height: 1.6;
 }
+.side textarea.code { font-family: ui-monospace, monospace; font-size: 0.85rem; }
 .mark { font-size: 0.75rem; color: var(--muted); }
 .mark.saved { color: var(--accent); }
 
