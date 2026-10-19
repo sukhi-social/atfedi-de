@@ -131,6 +131,13 @@ export async function serveDocPage(request, env, url, lang, path) {
   return new Response(out.body, { status: page.draft ? 404 : 200, headers });
 }
 
+// "Anyone can join", with the operator's account as a link.
+const invite = (lang) =>
+  esc(t(lang, 'draft.invite')).replace(
+    'kuro_admin',
+    '<a href="https://sukhi.f3liz.casa/@kuro_admin">@kuro_admin@sukhi.f3liz.casa</a>',
+  );
+
 // A page no person has passed through write yet, in this language. Instead of
 // a bare 404: ways in to look the draft over (write) or to bring over a
 // version people already passed (translate), and that version to read.
@@ -154,6 +161,7 @@ function draftPage(lang, route, entry, path) {
   const html =
     `<header class="hero"><p class="lane-mark">${esc(route.kicker)}</p>` +
     `<h1>${esc(title)}</h1><p class="tagline">${esc(t(lang, 'draft.lead'))}</p></header>` +
+    `<h2>${esc(t(lang, 'draft.fluent'))}</h2><p>${invite(lang)}</p>` +
     (doors.length ? `<div class="doors">${doors.join('')}</div>` : '');
   const footer = read.length ? `<p class="doc-credits">${esc(t(lang, 'draft.read'))} ${read.join(' · ')}</p>` : '';
   return { html, footer, toc: '', title, tagline: t(lang, 'draft.lead'), draft: true };
