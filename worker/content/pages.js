@@ -12,7 +12,7 @@
 //   /sitemap.xml               plus every page above
 
 import { renderToolPage } from '../../catalog/src/lib/tool-page.ts';
-import { ui, defaultLocale } from '../../catalog/src/i18n/ui.ts';
+import { ui, defaultLocale, localeNames } from '../../catalog/src/i18n/ui.ts';
 import { contentIndex, contentFile } from './store.js';
 
 const t = (lang, key) => ui[lang]?.[key] ?? ui[defaultLocale][key] ?? key;
@@ -96,10 +96,14 @@ export async function serveDocPage(request, env, url, lang, path) {
     contentFile(env, route.doc, lang, { published: true }),
     contentIndex(env),
   ]);
-  if (markdown === null) return null;
-  const credits = index.docs.find((d) => d.doc === route.doc)?.files?.[lang]?.published?.credits;
+  const entry = index.docs.find((d) => d.doc === route.doc);
+  if (markdown === null && !entry) return null;
+  const credits = entry?.files?.[lang]?.published?.credits;
   const icons = route.icons ?? (await siteData(env, url)).icons;
-  const page = renderToolPage(markdown, route.kicker, icons);
+  const page =
+    markdown === null
+      ? draftPage(lang, route, entry, path)
+      : { ...renderToolPage(markdown, route.kicker, icons), footer: creditsHtml(lang, route.doc, credits) };
   const title = route.title(page);
 
   const shell = await env.ASSETS.fetch(new Request(new URL(route.shell, url), request));
@@ -116,14 +120,51 @@ export async function serveDocPage(request, env, url, lang, path) {
     .on('[data-doc-grid]', {
       element: (e) => e.setAttribute('style', `--color-lane: var(--color-${route.lane})`),
     })
-    .on('[data-doc-body]', { element: (e) => e.setInnerContent(page.html + creditsHtml(lang, route.doc, credits), { html: true }) })
+    .on('[data-doc-body]', { element: (e) => e.setInnerContent(page.html + page.footer, { html: true }) })
     .on('[data-doc-toc]', {
       element: (e) => (page.toc ? e.setInnerContent(page.toc, { html: true }) : e.remove()),
     })
+    .on('head', { element: (e) => page.draft && e.append('<meta name="robots" content="noindex">', { html: true }) })
     .transform(shell);
   const headers = new Headers(out.headers);
   headers.set('cache-control', 'public, max-age=60');
-  return new Response(out.body, { status: 200, headers });
+  return new Response(out.body, { status: page.draft ? 404 : 200, headers });
+}
+
+// "Anyone can join", with the operator's account as a link.
+const invite = (lang) =>
+  esc(t(lang, 'draft.invite')).replace(
+    'kuro_admin',
+    '<a href="https://sukhi.f3liz.casa/@kuro_admin">@kuro_admin@sukhi.f3liz.casa</a>',
+  );
+
+// A page no person has passed through write yet, in this language. Instead of
+// a bare 404: ways in to look the draft over (write) or to bring over a
+// version people already passed (translate), and that version to read.
+function draftPage(lang, route, entry, path) {
+  const doc = route.doc;
+  const done = Object.keys(entry.files).filter((l) => l !== lang && entry.files[l].published);
+  const from = done[0];
+  const title = entry.files[lang]?.published?.title ?? entry.title[lang] ?? entry.files[from]?.published?.title ?? doc;
+  const door = (href, head, note) =>
+    `<a class="lane-door" data-lane="${esc(route.lane)}" href="${esc(href)}"><h3>${esc(head)}</h3><p>${esc(note)}</p></a>`;
+  const doors = [];
+  if (entry.files[lang]) {
+    const hash = new URLSearchParams({ doc, from: lang, to: lang, ...(from ? { beside: from } : {}) });
+    doors.push(door(`https://write.atfedi.de/#${hash}`, t(lang, 'draft.review'), t(lang, 'draft.reviewNote')));
+  }
+  if (from) {
+    const hash = new URLSearchParams({ doc, from, to: lang });
+    doors.push(door(`https://translate.atfedi.de/#${hash}`, t(lang, 'draft.translate'), t(lang, 'draft.translateNote')));
+  }
+  const read = done.map((l) => `<a href="https://${l}.atfedi.de${esc(path)}" hreflang="${l}">${esc(localeNames[l] ?? l)}</a>`);
+  const html =
+    `<header class="hero"><p class="lane-mark">${esc(route.kicker)}</p>` +
+    `<h1>${esc(title)}</h1><p class="tagline">${esc(t(lang, 'draft.lead'))}</p></header>` +
+    `<h2>${esc(t(lang, 'draft.fluent'))}</h2><p>${invite(lang)}</p>` +
+    (doors.length ? `<div class="doors">${doors.join('')}</div>` : '');
+  const footer = read.length ? `<p class="doc-credits">${esc(t(lang, 'draft.read'))} ${read.join(' · ')}</p>` : '';
+  return { html, footer, toc: '', title, tagline: t(lang, 'draft.lead'), draft: true };
 }
 
 // A page in one language as the site shows it, or null while it's an AI
