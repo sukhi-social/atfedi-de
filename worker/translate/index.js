@@ -15,7 +15,6 @@ import { contentIndex, contentFile, serveMedia, stageMedia, stagedMedia, MEDIA_T
 import { sendPage } from '../content/github.js';
 
 const LANGS = new Set(['en', 'ja', 'ko']);
-const MAX_PARAGRAPH = 20000;
 const MAX_INDEX = 2000;
 const MAX_FILE = 200000;
 const MAX_IMAGE = 5 * 1024 * 1024; // the desk shrinks pictures first; this is a backstop
@@ -109,7 +108,7 @@ export async function handleTranslate(request, env, ctx) {
         idx < 0 ||
         idx > MAX_INDEX ||
         typeof text !== 'string' ||
-        text.length > MAX_PARAGRAPH
+        text.length > MAX_FILE // write keeps the whole page in one draft
       ) {
         return json({ error: 'bad request' }, 400);
       }
