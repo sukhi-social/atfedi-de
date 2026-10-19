@@ -10,7 +10,7 @@
 // and each person's drafts. Reading needs no login; saving a draft does.
 
 import { handleLogin, handleCallback, handleLogout, sessionHandle } from './auth.js';
-import { listDrafts, putDraft, clearDrafts, putSend, getSend } from './store.js';
+import { listDrafts, putDraft, clearDrafts, putSend, getSend, hasAgreed, putAgreed } from './store.js';
 import { contentIndex, contentFile, serveMedia, stageMedia, stagedMedia, MEDIA_TYPES } from '../content/store.js';
 import { sendPage } from '../content/github.js';
 
@@ -76,7 +76,18 @@ export async function handleTranslate(request, env, ctx) {
   }
 
   if (path === '/api/me') {
-    return json({ handle: await sessionHandle(request, env) });
+    const handle = await sessionHandle(request, env);
+    return json({ handle, cc0: handle ? await hasAgreed(env.FEDI_DB, handle) : false });
+  }
+
+  // "What I send is CC0", ticked once beside the Send button.
+  if (path === '/api/cc0') {
+    if (request.method !== 'POST') return json({ error: 'method' }, 405);
+    if (request.headers.get('origin') !== url.origin) return json({ error: 'origin' }, 403);
+    const handle = await sessionHandle(request, env);
+    if (!handle) return json({ error: 'login' }, 401);
+    await putAgreed(env.FEDI_DB, handle);
+    return json({ ok: true });
   }
 
   if (path === '/api/drafts') {
@@ -125,6 +136,8 @@ export async function handleTranslate(request, env, ctx) {
     const handle = await sessionHandle(request, env);
     if (!handle) return json({ error: 'login' }, 401);
     if (!env.CONTENT_GITHUB_TOKEN) return json({ error: 'not set up' }, 503);
+    // atfedi-content is CC0, so only what its writer agreed to give that way
+    if (!(await hasAgreed(env.FEDI_DB, handle))) return json({ error: 'cc0' }, 403);
     let body;
     try {
       body = await request.json();

@@ -219,6 +219,9 @@
   font-size: 0.875rem;
   color: var(--color-text-muted);
 }
+.tool-page .doc-credits + .doc-credits {
+  margin-top: var(--space-2);
+}
 
 .tool-page img {
   display: block;

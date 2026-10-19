@@ -290,6 +290,14 @@ button.pressed { transform: scale(0.95); filter: brightness(0.88); }
 
 /* Send, and how it's going, side by side in the tab bar (which stays in view) */
 .send { display: inline-flex; align-items: center; gap: 0.4rem; }
+/* the one-time CC0 agreement: its own line, right under Send */
+.tab:has(.cc0) { flex-wrap: wrap; }
+.send:has(.cc0) { display: contents; }
+.cc0 { order: 1; flex-basis: 100%; display: flex; justify-content: flex-end; align-items: center; gap: 0.4rem; color: var(--muted); text-align: right; }
+.cc0 input { margin: 0; }
+.cc0 a { color: inherit; white-space: nowrap; }
+.chip[hidden] { display: none; }
+button:disabled { opacity: 0.5; cursor: default; }
 .chip {
   position: relative;
   display: inline-flex;
