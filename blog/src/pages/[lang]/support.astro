@@ -14,7 +14,7 @@ const lang = Astro.params.lang as Locale;
 // GeekNews' Fairy (fairy.hada.io); everyone else gets a worldwide channel.
 // Each door stays dark until its URL is filled in.
 const fairy = { href: 'https://fairy.hada.io/@atfedi-de', name: '페어리 (Fairy)' };
-const world = { href: '', name: '' }; // e.g. GitHub Sponsors — to be decided
+const world = { href: 'https://liberapay.com/sukhi-social', name: 'Liberapay' };
 
 const title: Record<Locale, string> = {
   en: 'Supporting this place',
@@ -124,6 +124,11 @@ const description: Record<Locale, string> = {
               </p>
             ) : (
               <p class="note">창구는 지금 준비하고 있어요. 조금만 기다려 주세요.</p>
+            )}
+            {world.href && (
+              <p>
+                해외에 계신 분은 <a href={world.href}>{world.name}</a>로 응원할 수 있어요.
+              </p>
             )}
           </>
         )
