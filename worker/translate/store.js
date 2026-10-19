@@ -72,3 +72,16 @@ export async function getSend(db, id, handle) {
     .bind(id, handle)
     .first();
 }
+
+/** Whether this person agreed to give what they send under CC0. */
+export async function hasAgreed(db, handle) {
+  const row = await db.prepare('SELECT 1 AS ok FROM translate_cc0 WHERE handle = ?').bind(handle).first();
+  return !!row;
+}
+
+export async function putAgreed(db, handle) {
+  await db
+    .prepare('INSERT INTO translate_cc0 (handle, agreed_at) VALUES (?, ?) ON CONFLICT(handle) DO NOTHING')
+    .bind(handle, new Date().toISOString())
+    .run();
+}

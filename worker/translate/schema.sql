@@ -38,3 +38,10 @@ CREATE TABLE IF NOT EXISTS translate_sends (
   url        TEXT,
   updated_at TEXT NOT NULL
 );
+
+-- The people who agreed that what they send is CC0, as atfedi-content is:
+-- asked once, beside the Send button, before their first send.
+CREATE TABLE IF NOT EXISTS translate_cc0 (
+  handle    TEXT PRIMARY KEY,
+  agreed_at TEXT NOT NULL
+);

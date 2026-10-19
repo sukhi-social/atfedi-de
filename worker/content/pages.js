@@ -67,7 +67,14 @@ function creditsHtml(lang, doc, credits) {
   if (by.length) parts.push(`${esc(t(lang, 'credits.by'))} ${by.map(esc).join(', ')}`);
   if (assisted.length) parts.push(`${esc(t(lang, 'credits.assisted'))} ${assisted.map(esc).join(', ')}`);
   parts.push(`<a href="${esc(edit)}">${esc(t(lang, 'credits.edit'))}</a>`);
-  return `<p class="doc-credits">${parts.join(' · ')}</p>`;
+  return `<p class="doc-credits">${parts.join(' · ')}</p>` + licenseHtml(lang);
+}
+
+// Everything in atfedi-content is CC0 (its LICENSE), and the desk asks each
+// writer to agree to that before their first send.
+function licenseHtml(lang) {
+  const deed = `https://creativecommons.org/publicdomain/zero/1.0/deed.${lang}`;
+  return `<p class="doc-credits"><a href="${esc(deed)}" rel="license">CC0</a> · ${esc(t(lang, 'license.cc0'))}</p>`;
 }
 
 // The shell's head and language switcher still name /doc-shell/; point them

@@ -26,6 +26,9 @@ const STRINGS = {
     writeTagline: 'Rewrite an atfedi.de page in your own words',
     writeHowto: "This is the page as it is. Rewrite it the way you'd say it. When you send it, the commit is yours, and Claude is credited as Assisted-by if it wrote the version you started from.",
     send: 'Send',
+    cc0Agree: 'What I send is CC0: I give up my copyright in it as far as the law allows.',
+    cc0More: 'What is CC0?',
+    cc0Needed: 'Tick the CC0 box beside Send to send.',
     picture: 'Picture',
     pictureFailed: "A picture couldn't be uploaded. Try sending again.",
     undo: 'Undo',
@@ -60,6 +63,9 @@ const STRINGS = {
     writeTagline: 'atfedi.de のページを、自分のことばで書き直す',
     writeHowto: 'いまのページが入っています。自分の言い方で書き直してください。送ると、コミットはあなたの名前になります。もとの文を Claude が書いていたら、Assisted-by に Claude が入ります。',
     send: '送る',
+    cc0Agree: '送るものは CC0 にして、著作権をできるかぎり手放します。',
+    cc0More: 'CC0 とは',
+    cc0Needed: '送るには、となりの CC0 にチェックを入れてください。',
     picture: '画像',
     pictureFailed: '画像をアップロードできませんでした。もう一度送ってみてください。',
     undo: '取り消す',
@@ -94,6 +100,9 @@ const STRINGS = {
     writeTagline: 'atfedi.de 페이지를 내 말로 다시 써요',
     writeHowto: '지금의 페이지가 들어 있어요. 내 말투로 다시 써 주세요. 보내면 커밋은 내 이름으로 남아요. 원래 글을 Claude가 썼다면 Assisted-by에 Claude가 들어가요.',
     send: '보내기',
+    cc0Agree: '보내는 글은 CC0로 하고, 저작권을 가능한 만큼 내려놓을게요.',
+    cc0More: 'CC0가 뭔가요?',
+    cc0Needed: '보내려면 옆의 CC0에 체크해 주세요.',
     picture: '사진',
     pictureFailed: '사진을 올리지 못했어요. 다시 보내 보세요.',
     undo: '취소',
@@ -143,6 +152,7 @@ const el = (tag, props = {}, ...children) => {
 // --- state -----------------------------------------------------------------
 
 let me = null;
+let agreed = false; // CC0 for what this account sends, asked once (/api/cc0)
 let docs = [];
 
 async function getJson(url, init) {
@@ -635,6 +645,38 @@ function pictureButton() {
 // below when it's in.
 const UNDO_MS = 4000;
 
+// atfedi-content is CC0, so what you send has to be too. Until you've agreed
+// once, a small box sits beside Send; the agreement is kept with your account
+// when you first send, and the box doesn't come back after that.
+function cc0Box(button) {
+  if (agreed) return null;
+  const box = el('input', { type: 'checkbox' });
+  button.disabled = true;
+  button.title = s.cc0Needed;
+  box.addEventListener('change', () => {
+    button.disabled = !box.checked;
+    button.title = box.checked ? '' : s.cc0Needed;
+  });
+  const deed = `https://creativecommons.org/publicdomain/zero/1.0/deed.${uiLang}`;
+  return el(
+    'label',
+    { className: 'cc0' },
+    box,
+    ' ',
+    s.cc0Agree,
+    ' ',
+    el('a', { href: deed, target: '_blank', rel: 'noopener license', textContent: s.cc0More }),
+  );
+}
+
+async function agree() {
+  if (agreed) return;
+  const res = await fetch('/api/cc0', { method: 'POST' });
+  if (!res.ok) throw new Error(String(res.status));
+  agreed = true;
+  local.set('who', { handle: me, cc0: true });
+}
+
 function sendButton(doc, lang, repoPath) {
   const button = el('button', { type: 'button', className: 'small', textContent: s.send });
   if (!me) {
@@ -642,6 +684,7 @@ function sendButton(doc, lang, repoPath) {
     button.title = s.signInToSave;
     return button;
   }
+  const consent = cc0Box(button);
   // what's happening shows here, beside the button you pressed
   const chip = el('span', { className: 'chip', hidden: true, role: 'status' });
   const show = (state, ...children) => {
@@ -670,6 +713,8 @@ function sendButton(doc, lang, repoPath) {
       show('sending', s.chipSending);
       try {
         await ready;
+        await agree();
+        consent?.remove();
         const { id } = await getJson('/api/send', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
@@ -694,7 +739,7 @@ function sendButton(doc, lang, repoPath) {
     }, UNDO_MS);
   };
   button.addEventListener('click', send);
-  return el('span', { className: 'send' }, button, chip);
+  return el('span', { className: 'send' }, ...(consent ? [consent] : []), button, chip);
 }
 
 // How the send went, checked quietly until it's settled; null if it never says.
@@ -723,14 +768,20 @@ document.addEventListener('pointerdown', (e) => {
 
 async function start() {
   // what you saw last, at once; the network catches up behind it
-  [me, docs] = await Promise.all([
-    swr('me', () => getJson('/api/me').then((r) => r.handle ?? false).catch(() => null), (v) => {
-      me = v || null;
+  const setWho = (v) => {
+    me = v?.handle || null;
+    agreed = !!(me && v.cc0);
+  };
+  let who;
+  [who, docs] = await Promise.all([
+    swr('who', () => getJson('/api/me').catch(() => null), (v) => {
+      setWho(v);
       renderWho();
       renderPairs();
-    }).then((v) => v || null),
+    }),
     swr('docs', () => getJson('/docs.json').catch(() => null)),
   ]);
+  setWho(who);
   docs ??= [];
   renderWho();
 
