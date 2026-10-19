@@ -19,12 +19,12 @@ const STRINGS = {
     loginLabel: 'Sign in with your fediverse account — enter the server it lives on',
     loginButton: 'Sign in',
     loginHint: 'Mastodon, Misskey, GoToSocial, and most others work. We only read your account name.',
-    doc: 'Page', from: 'From', to: 'Into',
+    doc: 'Page', from: 'From', to: 'Into', lang: 'Language',
     howto: "The left side is the source. Each paragraph lines up with its translation, but they don't have to match word for word. Write it the way your language would say it.",
     readOnly: 'read-only',
     download: 'Download',
     writeTagline: 'Rewrite an atfedi.de page in your own words',
-    writeHowto: "The left side is the page as it is. Rewrite it on the right the way you'd say it. When you send it, the commit is yours, and Claude is credited as Assisted-by if it wrote the version you started from.",
+    writeHowto: "This is the page as it is. Rewrite it the way you'd say it. When you send it, the commit is yours, and Claude is credited as Assisted-by if it wrote the version you started from.",
     send: 'Send',
     picture: 'Picture',
     pictureFailed: "A picture couldn't be uploaded. Try sending again.",
@@ -38,7 +38,6 @@ const STRINGS = {
     progress: (done, total) => `${done} / ${total} translated`,
     warnings: (n) => `${n} to check`,
     nextEmpty: 'Next untranslated',
-    rewritten: (done, total) => `${done} / ${total} rewritten`,
     copySource: 'Copy the source',
     keys: 'Alt+↑↓ move between paragraphs · Ctrl+Enter next untranslated · Ctrl+Shift+Enter copy the source in',
     checks: {
@@ -54,12 +53,12 @@ const STRINGS = {
     loginLabel: 'フェディバースのアカウントでログイン。アカウントのあるサーバーを入れてください',
     loginButton: 'ログイン',
     loginHint: 'Mastodon、Misskey、GoToSocial など、たいていのサーバーで使えます。読むのはアカウント名だけ。',
-    doc: 'ページ', from: '原文', to: '訳す先',
+    doc: 'ページ', from: '原文', to: '訳す先', lang: '言語',
     howto: '左が原文。段落ごとに横に並びますが、一語ずつ合わせなくて大丈夫。その言語らしい言い方で。',
     readOnly: '読み取り専用',
     download: 'ダウンロード',
     writeTagline: 'atfedi.de のページを、自分のことばで書き直す',
-    writeHowto: '左がいまのページです。右に、自分の言い方で書き直してください。送ると、コミットはあなたの名前になります。もとの文を Claude が書いていたら、Assisted-by に Claude が入ります。',
+    writeHowto: 'いまのページが入っています。自分の言い方で書き直してください。送ると、コミットはあなたの名前になります。もとの文を Claude が書いていたら、Assisted-by に Claude が入ります。',
     send: '送る',
     picture: '画像',
     pictureFailed: '画像をアップロードできませんでした。もう一度送ってみてください。',
@@ -73,7 +72,6 @@ const STRINGS = {
     progress: (done, total) => `${total} 段落中 ${done} 訳済み`,
     warnings: (n) => `確認 ${n}`,
     nextEmpty: '次の未訳へ',
-    rewritten: (done, total) => `${total} 段落中 ${done} 書き直し済み`,
     copySource: '原文を写す',
     keys: 'Alt+↑↓ 段落を移動 · Ctrl+Enter 次の未訳へ · Ctrl+Shift+Enter 原文を写す',
     checks: {
@@ -89,12 +87,12 @@ const STRINGS = {
     loginLabel: '페디버스 계정으로 로그인해요. 계정이 있는 서버를 적어 주세요',
     loginButton: '로그인',
     loginHint: '마스토돈, Misskey, GoToSocial 등 대부분의 서버에서 돼요. 읽는 건 계정 이름뿐이에요.',
-    doc: '페이지', from: '원문', to: '옮길 언어',
+    doc: '페이지', from: '원문', to: '옮길 언어', lang: '언어',
     howto: '왼쪽이 원문이에요. 문단마다 옆에 나란히 놓이지만, 한 단어씩 맞출 필요는 없어요. 그 언어다운 말투로 써 주세요.',
     readOnly: '읽기 전용',
     download: '내려받기',
     writeTagline: 'atfedi.de 페이지를 내 말로 다시 써요',
-    writeHowto: '왼쪽이 지금의 페이지예요. 오른쪽에 내 말투로 다시 써 주세요. 보내면 커밋은 내 이름으로 남아요. 원래 글을 Claude가 썼다면 Assisted-by에 Claude가 들어가요.',
+    writeHowto: '지금의 페이지가 들어 있어요. 내 말투로 다시 써 주세요. 보내면 커밋은 내 이름으로 남아요. 원래 글을 Claude가 썼다면 Assisted-by에 Claude가 들어가요.',
     send: '보내기',
     picture: '사진',
     pictureFailed: '사진을 올리지 못했어요. 다시 보내 보세요.',
@@ -108,7 +106,6 @@ const STRINGS = {
     progress: (done, total) => `${total}개 중 ${done}개 번역`,
     warnings: (n) => `확인 ${n}`,
     nextEmpty: '다음 빈 문단',
-    rewritten: (done, total) => `${total}개 중 ${done}개 다시 씀`,
     copySource: '원문 복사',
     keys: 'Alt+↑↓ 문단 이동 · Ctrl+Enter 다음 빈 문단 · Ctrl+Shift+Enter 원문 복사해 넣기',
     checks: {
@@ -127,9 +124,12 @@ document.documentElement.lang = uiLang;
 if (WRITE) {
   s.tagline = s.writeTagline;
   s.howto = s.writeHowto;
+  s.from = s.lang;
   document.title = 'write — atfedi.de';
   document.querySelector('.title-tag').firstChild.textContent = 'write ';
   document.getElementById('to').closest('label').hidden = true;
+  // one editor with the whole page: no source pane, no paragraph rows
+  document.documentElement.classList.add('write');
 }
 for (const el of document.querySelectorAll('[data-t]')) el.textContent = s[el.dataset.t];
 
@@ -316,11 +316,10 @@ function review(row) {
 }
 
 function tally() {
-  const done = WRITE
-    ? rows.filter((r) => r.box.value.trim() && r.box.value.trim() !== (r.src ?? '').trim()).length
-    : rows.filter((r) => r.box.value.trim()).length;
+  const done = rows.filter((r) => r.box.value.trim()).length;
   const warn = rows.filter((r) => r.el.classList.contains('warn')).length;
-  $('progress').textContent = `${(WRITE ? s.rewritten : s.progress)(done, rows.length)}${warn ? ` · ${s.warnings(warn)}` : ''}`;
+  const parts = [...(WRITE ? [] : [s.progress(done, rows.length)]), ...(warn ? [s.warnings(warn)] : [])];
+  $('progress').textContent = parts.join(' · ');
 }
 
 function focusRow(i, atEnd = false) {
@@ -380,8 +379,16 @@ async function renderPairs() {
     swr(`page:${doc.doc}:${lang}`, () => getText(`/content/${doc.doc}.${lang}.md`), refresh);
   const [source, target] = await Promise.all([page(from), doc.title[to] ? page(to) : null]);
   if (at !== renderCount) return;
-  const drafts = local.get(draftKey(doc.doc, to)) ?? {};
-  const pairs = align(paragraphs(source ?? '').map(unwrap), paragraphs(target ?? '').map(unwrap));
+  let drafts = local.get(draftKey(doc.doc, to)) ?? {};
+  // drafts from when write had a row per paragraph don't fit one editor
+  if (WRITE && Object.keys(drafts).some((i) => i !== '0')) {
+    drafts = {};
+    local.set(draftKey(doc.doc, to), null);
+  }
+  const split = (md) => paragraphs(md ?? '').map(unwrap);
+  // write is one editor holding the whole page
+  const whole = (md) => split(md).join('\n\n');
+  const pairs = WRITE ? [[whole(source), whole(target)]] : align(split(source), split(target));
   const left = pairs.map((p) => p[0]);
   const right = pairs.map((p) => p[1]);
   // a draft the page now says too has been published: let it go

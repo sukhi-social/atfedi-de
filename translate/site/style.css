@@ -319,3 +319,15 @@ button.pressed { transform: scale(0.95); filter: brightness(0.88); }
 @media (prefers-reduced-motion: reduce) {
   button, .chip { transition: none; animation: none; }
 }
+
+/* write.atfedi.de: one editor with the whole page, no source pane. */
+.write .tabs,
+.write .para { grid-template-columns: 1fr; }
+.write #tab-from,
+.write .src,
+.write .keys,
+.write .copy { display: none !important; }
+.write .tab + .tab,
+.write .dst { border-left: 0; }
+.write .dst .num { color: transparent; }
+.pick label[hidden] { display: none; }
