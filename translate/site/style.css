@@ -58,6 +58,8 @@ header {
 
 .title-tag { font-size: 1.1rem; font-weight: 600; }
 .title-tag small { display: block; font-weight: 400; font-size: 0.85rem; color: var(--muted); }
+.corner { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; }
+.corner select { font-size: 0.8rem; }
 .who { font-size: 0.9rem; text-align: right; }
 .who a { color: var(--muted); margin-left: 0.6rem; white-space: nowrap; }
 
