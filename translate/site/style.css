@@ -281,3 +281,41 @@ button.ghost { background: transparent; color: var(--accent); }
 }
 
 .actions { margin-top: 1.6rem; }
+
+/* A press shows the moment it lands (app.js adds .pressed on pointerdown),
+   and taps skip the browser's double-tap wait. */
+button { touch-action: manipulation; transition: transform 40ms ease-out, filter 40ms ease-out; }
+button:active,
+button.pressed { transform: scale(0.95); filter: brightness(0.88); }
+
+/* Send, and how it's going, side by side in the tab bar (which stays in view) */
+.send { display: inline-flex; align-items: center; gap: 0.4rem; }
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--active);
+  white-space: nowrap;
+  overflow: hidden;
+  animation: chip-in 120ms ease-out;
+}
+.chip[data-state='done'],
+.chip[data-state='sent'] { color: var(--accent); }
+.chip[data-state='failed'] { color: var(--warn); }
+.chip a { color: inherit; font-weight: 600; }
+.chip .bar {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 2px;
+  background: var(--accent);
+  transform-origin: left;
+  animation: chip-bar linear forwards;
+}
+@keyframes chip-in { from { opacity: 0; transform: translateY(2px); } }
+@keyframes chip-bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) {
+  button, .chip { transition: none; animation: none; }
+}
