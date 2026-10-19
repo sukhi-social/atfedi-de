@@ -2,6 +2,12 @@
 // CONTENT bucket: content/<doc>.<lang>.md for every page, and index.json
 // listing them ({ docs: [{ doc, title: {lang}, lead: {lang}, files }] }).
 // Merging there is the deploy; nothing here needs rebuilding.
+//
+// The site shows only what a person passed through write: published/content/
+// holds the version from their last send, and files[lang].published says
+// which ({ title, lead, credits, ... }, or null for a draft no one has sent
+// yet). The desk reads content/, the newest text, so there's something to
+// rewrite.
 
 export async function contentIndex(env) {
   const obj = await env.CONTENT.get('index.json');
@@ -9,10 +15,10 @@ export async function contentIndex(env) {
   return await obj.json();
 }
 
-/** The markdown of one page in one language, or null. */
-export async function contentFile(env, doc, lang) {
+/** The markdown of one page in one language, or null. `published` gives the site's version. */
+export async function contentFile(env, doc, lang, { published = false } = {}) {
   if (!/^[a-z0-9-]+(\/[a-z0-9-]+){1,3}$/.test(doc) || !/^[a-z]{2}$/.test(lang)) return null;
-  const obj = await env.CONTENT.get(`content/${doc}.${lang}.md`);
+  const obj = await env.CONTENT.get(`${published ? 'published/' : ''}content/${doc}.${lang}.md`);
   return obj ? await obj.text() : null;
 }
 

@@ -328,14 +328,16 @@ button:disabled { opacity: 0.5; cursor: default; }
   button, .chip { transition: none; animation: none; }
 }
 
-/* write.atfedi.de: one editor with the whole page, no source pane. */
-.write .tabs,
-.write .para { grid-template-columns: 1fr; }
-.write #tab-from,
-.write .src,
+/* write.atfedi.de: one editor with the whole page, no source pane, unless
+   you put another language beside it (.beside): then that sits on the left,
+   read-only, as in translate. */
+.write:not(.beside) .tabs,
+.write:not(.beside) .para { grid-template-columns: 1fr; }
+.write:not(.beside) #tab-from,
+.write:not(.beside) .src,
 .write .keys,
 .write .copy { display: none !important; }
-.write .tab + .tab,
-.write .dst { border-left: 0; }
-.write .dst .num { color: transparent; }
+.write:not(.beside) .tab + .tab,
+.write:not(.beside) .dst { border-left: 0; }
+.write .num { color: transparent; }
 .pick label[hidden] { display: none; }

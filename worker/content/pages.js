@@ -92,9 +92,12 @@ const fixPath = (shellPath, realPath) => ({
 export async function serveDocPage(request, env, url, lang, path) {
   const route = await resolve(env, url, lang, path);
   if (!route) return null;
-  const [markdown, index] = await Promise.all([contentFile(env, route.doc, lang), contentIndex(env)]);
+  const [markdown, index] = await Promise.all([
+    contentFile(env, route.doc, lang, { published: true }),
+    contentIndex(env),
+  ]);
   if (markdown === null) return null;
-  const credits = index.docs.find((d) => d.doc === route.doc)?.files?.[lang]?.credits;
+  const credits = index.docs.find((d) => d.doc === route.doc)?.files?.[lang]?.published?.credits;
   const icons = route.icons ?? (await siteData(env, url)).icons;
   const page = renderToolPage(markdown, route.kicker, icons);
   const title = route.title(page);
@@ -123,6 +126,10 @@ export async function serveDocPage(request, env, url, lang, path) {
   return new Response(out.body, { status: 200, headers });
 }
 
+// A page in one language as the site shows it, or null while it's an AI
+// draft no one has sent from write yet.
+const shown = (d, lang) => d.files?.[lang]?.published ?? null;
+
 /** The home page with its basics cards filled in. */
 export async function serveHome(request, env, url, lang, assetPath) {
   const [res, index] = await Promise.all([
@@ -131,11 +138,11 @@ export async function serveHome(request, env, url, lang, assetPath) {
   ]);
   if (!res.ok) return res;
   const cards = index.docs
-    .filter((d) => d.doc.startsWith('basics/') && d.title[lang])
+    .filter((d) => d.doc.startsWith('basics/') && shown(d, lang))
     .map(
       (d) =>
         `<a class="lane-door" data-lane="use" href="/basics/${esc(d.doc.slice(7))}/">` +
-        `<h3>${esc(d.title[lang])}</h3><p>${esc(d.lead?.[lang] ?? '')}</p></a>`,
+        `<h3>${esc(shown(d, lang).title)}</h3><p>${esc(shown(d, lang).lead ?? '')}</p></a>`,
     )
     .join('');
   const out = new HTMLRewriter()
@@ -156,7 +163,7 @@ export async function serveSitemap(request, env, url, lang, assetPath) {
   if (!res.ok) return res;
   const byContent = Object.fromEntries(Object.entries(site.guides).map(([p, g]) => [g.content, p]));
   const paths = index.docs
-    .filter((d) => d.title[lang])
+    .filter((d) => shown(d, lang))
     .map((d) => {
       if (d.doc.startsWith('basics/')) return `/basics/${d.doc.slice(7)}/`;
       const m = d.doc.match(/^(tool-pages\/[a-z0-9-]+)\/([a-z0-9-]+)$/);
