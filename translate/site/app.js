@@ -28,12 +28,8 @@ const STRINGS = {
     send: 'Send',
     picture: 'Picture',
     pictureFailed: "A picture couldn't be uploaded. Try sending again.",
-    published: 'Published. It shows on the site in a minute or two.',
-    proposed: 'Sent as a pull request. It goes up once someone looks it over:',
-    notSent: "Couldn't send it. Your drafts are still here.",
-    sendingAs: (p) => `Sending as ${p}…`,
     undo: 'Undo',
-    sent: 'Sent.',
+    chipWaiting: 'Sending…', chipSending: 'Sending', chipSent: 'Sent', chipPublished: 'Published', chipProposed: 'Sent as a PR', viewPR: 'View', chipFailed: "Couldn't send", retry: 'Retry',
     goesTo: (p) => `It goes to ${p} in atfedi-content.`,
     signedIn: 'Signed in as', logout: 'Sign out',
     saving: 'saving…', saved: 'saved',
@@ -67,12 +63,8 @@ const STRINGS = {
     send: '送る',
     picture: '画像',
     pictureFailed: '画像をアップロードできませんでした。もう一度送ってみてください。',
-    published: '公開しました。1、2分でサイトに出ます。',
-    proposed: 'PR として送りました。だれかが見てから公開されます:',
-    notSent: '送れませんでした。下書きは残っています。',
-    sendingAs: (p) => `${p} として送ります…`,
     undo: '取り消す',
-    sent: '送りました。',
+    chipWaiting: '送ります…', chipSending: '送っています', chipSent: '送りました', chipPublished: '公開しました', chipProposed: 'PR にしました', viewPR: '見る', chipFailed: '送れませんでした', retry: 'もう一度',
     goesTo: (p) => `atfedi-content の ${p} に置くものです。`,
     signedIn: 'ログイン中', logout: 'ログアウト',
     saving: '保存中…', saved: '保存しました',
@@ -106,12 +98,8 @@ const STRINGS = {
     send: '보내기',
     picture: '사진',
     pictureFailed: '사진을 올리지 못했어요. 다시 보내 보세요.',
-    published: '공개했어요. 1~2분 뒤에 사이트에 나와요.',
-    proposed: 'PR로 보냈어요. 누군가 확인한 뒤에 공개돼요:',
-    notSent: '보내지 못했어요. 초안은 남아 있어요.',
-    sendingAs: (p) => `${p}(으)로 보내요…`,
     undo: '취소',
-    sent: '보냈어요.',
+    chipWaiting: '보내요…', chipSending: '보내는 중', chipSent: '보냈어요', chipPublished: '공개했어요', chipProposed: 'PR로 보냈어요', viewPR: '보기', chipFailed: '보내지 못했어요', retry: '다시',
     goesTo: (p) => `atfedi-content의 ${p}에 들어갈 파일이에요.`,
     signedIn: '로그인:', logout: '로그아웃',
     saving: '저장 중…', saved: '저장했어요',
@@ -646,23 +634,32 @@ function sendButton(doc, lang, repoPath) {
     button.title = s.signInToSave;
     return button;
   }
-  const note = () => $('repo-path');
-  button.addEventListener('click', () => {
+  // what's happening shows here, beside the button you pressed
+  const chip = el('span', { className: 'chip', hidden: true, role: 'status' });
+  const show = (state, ...children) => {
+    chip.hidden = false;
+    chip.dataset.state = state;
+    chip.replaceChildren(...children);
+  };
+
+  const send = () => {
     const text = assemble();
     let undone = false;
     const undo = el('button', { type: 'button', className: 'small ghost', textContent: s.undo });
     undo.addEventListener('click', () => {
       undone = true;
       clearTimeout(timer);
-      button.disabled = false;
-      note().textContent = s.goesTo(repoPath);
+      button.hidden = false;
+      chip.hidden = true;
     });
-    button.disabled = true;
-    note().replaceChildren(s.sendingAs(me), ' ', undo);
+    button.hidden = true;
+    // the bar runs out over the undo window
+    show('waiting', el('span', { className: 'bar', style: `animation-duration: ${UNDO_MS}ms` }), s.chipWaiting, undo);
     const ready = uploadsSettled(); // starts now, inside the undo window
     ready.catch(() => {});
     const timer = setTimeout(async () => {
       if (undone) return;
+      show('sending', s.chipSending);
       try {
         await ready;
         const { id } = await getJson('/api/send', {
@@ -672,31 +669,47 @@ function sendButton(doc, lang, repoPath) {
         });
         // the drafts stay on this device until the page itself says the same
         // (renderPairs drops them then), so a pull request still shows yours
-        note().textContent = s.sent;
-        follow(id, repoPath);
+        show('sent', s.chipSent);
+        const res = await follow(id);
+        if (res?.status === 'published') show('done', s.chipPublished);
+        else if (res?.status === 'proposed') show('done', s.chipProposed, ' ', el('a', { href: res.url, target: '_blank', rel: 'noopener', textContent: s.viewPR }));
+        else if (res?.status === 'failed') throw new Error('send');
+        // still unknown after a minute: leave "sent"
       } catch (e) {
-        note().textContent = e.message === 'picture' ? s.pictureFailed : s.notSent;
+        const again = el('button', { type: 'button', className: 'small ghost', textContent: s.retry });
+        again.addEventListener('click', send);
+        show('failed', e.message === 'picture' ? s.pictureFailed : s.chipFailed, again);
       } finally {
-        button.disabled = false;
+        button.hidden = false;
+        $('repo-path').textContent = s.goesTo(repoPath);
       }
     }, UNDO_MS);
-  });
-  return button;
+  };
+  button.addEventListener('click', send);
+  return el('span', { className: 'send' }, button, chip);
 }
 
-// How the send went, checked quietly until it's settled.
-async function follow(id, repoPath) {
-  for (let wait = 1500; wait < 60000; wait *= 1.5) {
+// How the send went, checked quietly until it's settled; null if it never says.
+async function follow(id) {
+  for (let wait = 1000; wait < 60000; wait *= 1.5) {
     await new Promise((r) => setTimeout(r, wait));
     const res = await getJson(`/api/sends/${id}`).catch(() => null);
-    if (!res || res.status === 'sending') continue;
-    const note = $('repo-path');
-    if (res.status === 'published') note.textContent = s.published;
-    else if (res.status === 'proposed') note.replaceChildren(s.proposed, ' ', el('a', { href: res.url, textContent: repoPath }));
-    else note.textContent = s.notSent;
-    return;
+    if (res && res.status !== 'sending') return res;
   }
+  return null;
 }
+
+// Every button answers the moment a finger or the mouse goes down, not when
+// the click finishes: the press is drawn at once (style.css, .pressed).
+document.addEventListener('pointerdown', (e) => {
+  const b = e.target.closest?.('button');
+  if (!b || b.disabled) return;
+  b.classList.add('pressed');
+  const up = () => b.classList.remove('pressed');
+  b.addEventListener('pointerup', up, { once: true });
+  b.addEventListener('pointercancel', up, { once: true });
+  b.addEventListener('pointerleave', up, { once: true });
+});
 
 // --- start -------------------------------------------------------------------
 
