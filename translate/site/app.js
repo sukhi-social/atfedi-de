@@ -7,7 +7,7 @@
 // write.atfedi.de is the same desk with the same language on both sides: the
 // page as it is on the left, your own rewrite on the right.
 
-import { paragraphs, unwrap, isFence, highlight, check } from './markdown.js';
+import { paragraphs, align, unwrap, isFence, highlight, check } from './markdown.js';
 
 const LANGS = ['ko', 'ja', 'en'];
 const LANG_NAMES = { en: 'English', ja: '日本語', ko: '한국어' };
@@ -381,15 +381,16 @@ async function renderPairs() {
   const [source, target] = await Promise.all([page(from), doc.title[to] ? page(to) : null]);
   if (at !== renderCount) return;
   const drafts = local.get(draftKey(doc.doc, to)) ?? {};
-  const left = paragraphs(source ?? '').map(unwrap);
-  const right = paragraphs(target ?? '').map(unwrap);
+  const pairs = align(paragraphs(source ?? '').map(unwrap), paragraphs(target ?? '').map(unwrap));
+  const left = pairs.map((p) => p[0]);
+  const right = pairs.map((p) => p[1]);
   // a draft the page now says too has been published: let it go
   const stale = Object.keys(drafts).filter((i) => drafts[i].trim() === (right[i] ?? '').trim());
   if (stale.length) {
     for (const i of stale) delete drafts[i];
     local.set(draftKey(doc.doc, to), Object.keys(drafts).length ? drafts : null);
   }
-  const count = Math.max(left.length, right.length);
+  const count = pairs.length;
   const name = doc.doc.split('/').pop();
 
   $('tab-from').replaceChildren(`${name}.${from}.md`, el('span', { className: 'tag', textContent: s.readOnly }));
@@ -429,7 +430,7 @@ async function renderPairs() {
     const rowEl = el(
       'div',
       { className: `para${draft != null ? ' drafted' : ''}${isFence(src) ? ' code' : ''}` },
-      el('div', { className: 'src' }, el('span', { className: 'num', textContent: String(idx + 1) }), srcPre),
+      el('div', { className: 'src' }, el('span', { className: 'num', textContent: src == null ? '' : String(idx + 1) }), srcPre),
       el(
         'div',
         { className: 'dst' },
