@@ -152,7 +152,8 @@ if (WRITE) {
   document.querySelector('.title-tag').firstChild.textContent = 'write ';
   document.getElementById('to').closest('label').hidden = true;
   document.getElementById('beside').closest('label').hidden = false;
-  // one editor with the whole page: no source pane, no paragraph rows
+  // the page in paragraph rows, as in translate, with no source pane
+  // unless you put another language beside it
   document.documentElement.classList.add('write');
 }
 for (const el of document.querySelectorAll('[data-t]')) el.textContent = s[el.dataset.t];
@@ -336,6 +337,15 @@ async function saveDraft(doc, lang, idx, text, row) {
   }
 }
 
+// write was once one editor, saving the whole page as draft 0. Such a draft
+// becomes one draft per paragraph row.
+function wholeToRows(drafts, split) {
+  const keys = Object.keys(drafts);
+  if (!WRITE || keys.length !== 1 || keys[0] !== '0') return drafts;
+  const parts = split(drafts[0]);
+  return parts.length > 1 ? Object.fromEntries(parts.map((p, i) => [i, p])) : drafts;
+}
+
 // The server's drafts arrive after the page is up, and fill only paragraphs
 // this device has nothing for and you haven't touched.
 async function mergeServerDrafts(doc, lang, at) {
@@ -345,7 +355,7 @@ async function mergeServerDrafts(doc, lang, at) {
     .catch(() => ({}));
   if (at !== renderCount) return; // a different page is up now
   const mine = local.get(draftKey(doc, lang)) ?? {};
-  for (const [idx, text] of Object.entries(server)) {
+  for (const [idx, text] of Object.entries(wholeToRows(server, (md) => paragraphs(md).map(unwrap)))) {
     const row = rows[idx];
     if (!row || mine[idx] != null || row.touched) continue;
     row.box.value = text;
@@ -437,16 +447,12 @@ async function renderPairs() {
   // with nothing beside it, write still checks your rewrite against the page as it is
   const [source, target] = await Promise.all([page(left || from), doc.title[to] ? page(to) : null]);
   if (at !== renderCount) return;
-  let drafts = local.get(draftKey(doc.doc, to)) ?? {};
-  // drafts from when write had a row per paragraph don't fit one editor
-  if (WRITE && Object.keys(drafts).some((i) => i !== '0')) {
-    drafts = {};
-    local.set(draftKey(doc.doc, to), null);
-  }
   const split = (md) => paragraphs(md ?? '').map(unwrap);
-  // write is one editor holding the whole page
-  const whole = (md) => split(md).join('\n\n');
-  const pairs = WRITE ? [[whole(source), whole(target)]] : align(split(source), split(target));
+  const drafts = wholeToRows(local.get(draftKey(doc.doc, to)) ?? {}, split);
+  local.set(draftKey(doc.doc, to), Object.keys(drafts).length ? drafts : null);
+  // write: the page beside itself (its source pane hidden), or beside another
+  // language, paired paragraph by paragraph inside each heading's section
+  const pairs = align(split(source), split(target));
   const srcs = pairs.map((p) => p[0]);
   const right = pairs.map((p) => p[1]);
   // a draft the page now says too has been published: let it go

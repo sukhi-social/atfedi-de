@@ -330,7 +330,7 @@ button:disabled { opacity: 0.5; cursor: default; }
   button, .chip { transition: none; animation: none; }
 }
 
-/* write.atfedi.de: one editor with the whole page, no source pane, unless
+/* write.atfedi.de: the page in paragraph rows with no source pane, unless
    you put another language beside it (.beside): then that sits on the left,
    read-only, as in translate. */
 .write:not(.beside) .tabs,
@@ -341,5 +341,4 @@ button:disabled { opacity: 0.5; cursor: default; }
 .write .copy { display: none !important; }
 .write:not(.beside) .tab + .tab,
 .write:not(.beside) .dst { border-left: 0; }
-.write .num { color: transparent; }
 .pick label[hidden] { display: none; }
