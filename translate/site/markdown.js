@@ -39,27 +39,74 @@ export function paragraphs(markdown) {
   return blocks;
 }
 
-// Rows for the two panes. Headings cut each side into sections, and the
-// sections pair up in order; inside a section the paragraphs pair up in
-// order and the shorter side gets empty rows. So one extra paragraph on
-// either side only shifts the rest of its own section, not the whole page.
+// Rows for the two panes. Headings cut each side into sections, the sections
+// are matched up with the headings as anchors, and inside a matched pair the
+// paragraphs pair up in order, the shorter side getting empty rows. So an
+// extra paragraph on either side only shifts the rest of its own section.
+//
+// Sections usually match one to one, but a language may merge two sections
+// or split one (or lack a heading), and pairing by position would then run
+// every later section one off. So they're matched like two texts are
+// compared: same heading level scores, so does a similar size and the same
+// links and icons, and a section with no partner faces an empty one.
 const isHeading = (block) => /^#{1,6} /.test(block ?? '');
+const levelOf = (section) => (isHeading(section[0]) ? section[0].match(/^#+/)[0].length : 0);
 function sections(blocks) {
   const out = [[]];
   for (const b of blocks) {
     if (isHeading(b) && out.at(-1).length) out.push([]);
     out.at(-1).push(b);
   }
-  return out;
+  return out.filter((sec) => sec.length);
 }
+
+// links, icons and code a section carries over from one language to the next
+const marks = (section) =>
+  new Set(section.join('\n').match(/https?:\/\/[^\s)]+|\[icon:[a-z0-9-]+\]|`[^`]+`/g) ?? []);
+
+function affinity(a, b) {
+  if (levelOf(a) !== levelOf(b)) return -1;
+  let score = 10;
+  score -= Math.min(4, Math.abs(a.length - b.length));
+  const ma = marks(a);
+  const mb = marks(b);
+  for (const m of ma) if (mb.has(m)) score += 2;
+  return score;
+}
+
 export function align(left, right) {
   const a = sections(left);
   const b = sections(right);
+  const GAP = -3;
+  // best[i][j]: the best score for the first i and j sections
+  const best = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+  for (let i = 1; i <= a.length; i++) best[i][0] = i * GAP;
+  for (let j = 1; j <= b.length; j++) best[0][j] = j * GAP;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      best[i][j] = Math.max(
+        best[i - 1][j - 1] + affinity(a[i - 1], b[j - 1]),
+        best[i - 1][j] + GAP,
+        best[i][j - 1] + GAP,
+      );
+    }
+  }
+  // walk back, preferring to pair when it ties
+  const matched = [];
+  let i = a.length;
+  let j = b.length;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && best[i][j] === best[i - 1][j - 1] + affinity(a[i - 1], b[j - 1])) {
+      matched.push([a[--i], b[--j]]);
+    } else if (i > 0 && best[i][j] === best[i - 1][j] + GAP) {
+      matched.push([a[--i], []]);
+    } else {
+      matched.push([[], b[--j]]);
+    }
+  }
   const pairs = [];
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    const l = a[i] ?? [];
-    const r = b[i] ?? [];
-    for (let j = 0; j < Math.max(l.length, r.length); j++) pairs.push([l[j], r[j]]);
+  for (const [l, r] of matched.reverse()) {
+    for (let k = 0; k < Math.max(l.length, r.length); k++) pairs.push([l[k], r[k]]);
   }
   return pairs;
 }
