@@ -39,6 +39,31 @@ export function paragraphs(markdown) {
   return blocks;
 }
 
+// Rows for the two panes. Headings cut each side into sections, and the
+// sections pair up in order; inside a section the paragraphs pair up in
+// order and the shorter side gets empty rows. So one extra paragraph on
+// either side only shifts the rest of its own section, not the whole page.
+const isHeading = (block) => /^#{1,6} /.test(block ?? '');
+function sections(blocks) {
+  const out = [[]];
+  for (const b of blocks) {
+    if (isHeading(b) && out.at(-1).length) out.push([]);
+    out.at(-1).push(b);
+  }
+  return out;
+}
+export function align(left, right) {
+  const a = sections(left);
+  const b = sections(right);
+  const pairs = [];
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const l = a[i] ?? [];
+    const r = b[i] ?? [];
+    for (let j = 0; j < Math.max(l.length, r.length); j++) pairs.push([l[j], r[j]]);
+  }
+  return pairs;
+}
+
 export const isFence = (block) => /^(```|:::)/.test(block ?? '');
 
 // Join a paragraph's wrapped lines into one, the way markdown reads them (a
