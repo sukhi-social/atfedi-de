@@ -20,7 +20,7 @@ const STRINGS = {
     loginLabel: 'Sign in with your fediverse account — enter the server it lives on',
     loginButton: 'Sign in',
     loginHint: 'Mastodon, Misskey, GoToSocial, and most others work. We only read your account name.',
-    doc: 'Page', from: 'From', to: 'Into', lang: 'Language', uiLang: 'Language of this page', beside: 'Beside it', besideNone: 'nothing',
+    doc: 'Page', from: 'From', to: 'Into', lang: 'Language', uiLang: 'Language of this page', beside: 'Beside it', besideShow: 'Show',
     howto: "The left side is the source. Each paragraph lines up with its translation, but they don't have to match word for word. Write it the way your language would say it.",
     readOnly: 'read-only',
     download: 'Download',
@@ -57,7 +57,7 @@ const STRINGS = {
     loginLabel: 'フェディバースのアカウントでログイン。アカウントのあるサーバーを入れてください',
     loginButton: 'ログイン',
     loginHint: 'Mastodon、Misskey、GoToSocial など、たいていのサーバーで使えます。読むのはアカウント名だけ。',
-    doc: 'ページ', from: '原文', to: '訳す先', lang: '言語', uiLang: '画面の言語', beside: '横に', besideNone: 'なし',
+    doc: 'ページ', from: '原文', to: '訳す先', lang: '言語', uiLang: '画面の言語', beside: '横に', besideShow: '見せる',
     howto: '左が原文。段落ごとに横に並びますが、一語ずつ合わせなくて大丈夫。その言語らしい言い方で。',
     readOnly: '読み取り専用',
     download: 'ダウンロード',
@@ -94,7 +94,7 @@ const STRINGS = {
     loginLabel: '페디버스 계정으로 로그인해요. 계정이 있는 서버를 적어 주세요',
     loginButton: '로그인',
     loginHint: '마스토돈, Misskey, GoToSocial 등 대부분의 서버에서 돼요. 읽는 건 계정 이름뿐이에요.',
-    doc: '페이지', from: '원문', to: '옮길 언어', lang: '언어', uiLang: '화면 언어', beside: '옆에', besideNone: '없음',
+    doc: '페이지', from: '원문', to: '옮길 언어', lang: '언어', uiLang: '화면 언어', beside: '옆에', besideShow: '보기',
     howto: '왼쪽이 원문이에요. 문단마다 옆에 나란히 놓이지만, 한 단어씩 맞출 필요는 없어요. 그 언어다운 말투로 써 주세요.',
     readOnly: '읽기 전용',
     download: '내려받기',
@@ -240,7 +240,7 @@ function readHash() {
 
 function writeHash() {
   const p = new URLSearchParams({ doc: $('doc').value, from: $('from').value, to: $('to').value });
-  if (WRITE && $('beside').value) p.set('beside', $('beside').value);
+  if (WRITE && besideOn()) p.set('beside', $('beside').value);
   history.replaceState(null, '', `#${p}`);
 }
 
@@ -275,18 +275,19 @@ function fillLangs(doc) {
   }
 }
 
-// write: another language of the page, read-only on the left, or nothing.
-// The last choice is kept on this device, so it's there for the next page.
+// write: another language of the page, read-only on the left, shown or hidden
+// with the box beside the picker. Both choices are kept on this device. Hidden,
+// the page is still split into paragraph rows; only the left column goes.
+const besideOn = () => $('beside-on').checked && !!$('beside').value;
+
 function fillBeside(doc) {
   const from = $('from').value;
   const have = LANGS.filter((l) => doc.title[l] && l !== from);
   const beside = $('beside');
-  beside.replaceChildren(
-    el('option', { value: '', textContent: s.besideNone }),
-    ...have.map((l) => el('option', { value: l, textContent: LANG_NAMES[l] })),
-  );
-  const want = readHash().beside ?? local.get('beside') ?? '';
-  beside.value = have.includes(want) ? want : '';
+  const keep = beside.value;
+  beside.replaceChildren(...have.map((l) => el('option', { value: l, textContent: LANG_NAMES[l] })));
+  const want = [keep, readHash().beside, local.get('beside')].find((l) => have.includes(l));
+  beside.value = want ?? have[0] ?? '';
 }
 
 // --- the editors ---------------------------------------------------------------
@@ -434,8 +435,8 @@ async function renderPairs() {
   const from = $('from').value;
   if (WRITE) $('to').value = from;
   const to = $('to').value;
-  // write shows nothing on the left unless you put a language beside it
-  const left = WRITE ? $('beside').value : from;
+  // write shows nothing on the left unless the beside box is ticked
+  const left = WRITE ? (besideOn() ? $('beside').value : '') : from;
   document.documentElement.classList.toggle('beside', WRITE && !!left);
   writeHash();
 
@@ -857,8 +858,17 @@ async function start() {
     if (WRITE) fillBeside(docs.find((d) => d.doc === pick.value));
     renderPairs();
   });
+  // opening with a link that names a language shows it; otherwise as last left
+  $('beside-on').checked = !!readHash().beside || local.get('beside-on') === true;
   $('beside').addEventListener('change', () => {
     local.set('beside', $('beside').value || null);
+    // choosing a language is asking to see it
+    $('beside-on').checked = true;
+    local.set('beside-on', true);
+    renderPairs();
+  });
+  $('beside-on').addEventListener('change', () => {
+    local.set('beside-on', $('beside-on').checked);
     renderPairs();
   });
   $('to').addEventListener('change', renderPairs);
