@@ -70,7 +70,8 @@ function creditsHtml(lang, doc, credits) {
   return `<p class="doc-credits">${parts.join(' · ')}</p>`;
 }
 
-// The shell's head still names /doc-shell/; point it at the real path.
+// The shell's head and language switcher still name /doc-shell/; point them
+// at the real path.
 const fixPath = (shellPath, realPath) => ({
   element(e) {
     for (const attr of ['href', 'content']) {
@@ -101,7 +102,7 @@ export async function serveDocPage(request, env, url, lang, path) {
     .on('meta[name="description"], meta[property="og:description"]', {
       element: (e) => e.setAttribute('content', page.tagline),
     })
-    .on('link, meta[property="og:url"]', fixPath(shellPath, path))
+    .on('link, meta[property="og:url"], .lang-switch a', fixPath(shellPath, path))
     .on('[data-doc-grid]', {
       element: (e) => e.setAttribute('style', `--color-lane: var(--color-${route.lane})`),
     })
