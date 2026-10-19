@@ -339,12 +339,16 @@ async function saveDraft(doc, lang, idx, text, row) {
 }
 
 // write was once one editor, saving the whole page as draft 0. Such a draft
-// becomes one draft per paragraph row.
+// becomes one draft per paragraph row, laid out against the source the way the
+// rows are, so a paragraph one side lacks leaves a gap there and not a shift.
+let sourceBlocks = [];
 function wholeToRows(drafts, split) {
   const keys = Object.keys(drafts);
   if (!WRITE || keys.length !== 1 || keys[0] !== '0') return drafts;
   const parts = split(drafts[0]);
-  return parts.length > 1 ? Object.fromEntries(parts.map((p, i) => [i, p])) : drafts;
+  if (parts.length < 2) return drafts;
+  const rowsOf = align(sourceBlocks, parts).map((pair) => pair[1]);
+  return Object.fromEntries(rowsOf.flatMap((p, i) => (p == null ? [] : [[i, p]])));
 }
 
 // The server's drafts arrive after the page is up, and fill only paragraphs
@@ -449,6 +453,7 @@ async function renderPairs() {
   const [source, target] = await Promise.all([page(left || from), doc.title[to] ? page(to) : null]);
   if (at !== renderCount) return;
   const split = (md) => paragraphs(md ?? '').map(unwrap);
+  sourceBlocks = split(source);
   const drafts = wholeToRows(local.get(draftKey(doc.doc, to)) ?? {}, split);
   local.set(draftKey(doc.doc, to), Object.keys(drafts).length ? drafts : null);
   // write: the page beside itself (its source pane hidden), or beside another
