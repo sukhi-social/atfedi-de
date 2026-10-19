@@ -20,7 +20,7 @@ const STRINGS = {
     loginLabel: 'Sign in with your fediverse account — enter the server it lives on',
     loginButton: 'Sign in',
     loginHint: 'Mastodon, Misskey, GoToSocial, and most others work. We only read your account name.',
-    doc: 'Page', from: 'From', to: 'Into', lang: 'Language', beside: 'Beside it', besideNone: 'nothing',
+    doc: 'Page', from: 'From', to: 'Into', lang: 'Language', uiLang: 'Language of this page', beside: 'Beside it', besideNone: 'nothing',
     howto: "The left side is the source. Each paragraph lines up with its translation, but they don't have to match word for word. Write it the way your language would say it.",
     readOnly: 'read-only',
     download: 'Download',
@@ -57,7 +57,7 @@ const STRINGS = {
     loginLabel: 'フェディバースのアカウントでログイン。アカウントのあるサーバーを入れてください',
     loginButton: 'ログイン',
     loginHint: 'Mastodon、Misskey、GoToSocial など、たいていのサーバーで使えます。読むのはアカウント名だけ。',
-    doc: 'ページ', from: '原文', to: '訳す先', lang: '言語', beside: '横に', besideNone: 'なし',
+    doc: 'ページ', from: '原文', to: '訳す先', lang: '言語', uiLang: '画面の言語', beside: '横に', besideNone: 'なし',
     howto: '左が原文。段落ごとに横に並びますが、一語ずつ合わせなくて大丈夫。その言語らしい言い方で。',
     readOnly: '読み取り専用',
     download: 'ダウンロード',
@@ -94,7 +94,7 @@ const STRINGS = {
     loginLabel: '페디버스 계정으로 로그인해요. 계정이 있는 서버를 적어 주세요',
     loginButton: '로그인',
     loginHint: '마스토돈, Misskey, GoToSocial 등 대부분의 서버에서 돼요. 읽는 건 계정 이름뿐이에요.',
-    doc: '페이지', from: '원문', to: '옮길 언어', lang: '언어', beside: '옆에', besideNone: '없음',
+    doc: '페이지', from: '원문', to: '옮길 언어', lang: '언어', uiLang: '화면 언어', beside: '옆에', besideNone: '없음',
     howto: '왼쪽이 원문이에요. 문단마다 옆에 나란히 놓이지만, 한 단어씩 맞출 필요는 없어요. 그 언어다운 말투로 써 주세요.',
     readOnly: '읽기 전용',
     download: '내려받기',
@@ -128,7 +128,20 @@ const STRINGS = {
   },
 };
 
-const uiLang = LANGS.find((l) => navigator.language.toLowerCase().startsWith(l)) ?? 'en';
+// The desk speaks the language you picked in its corner, if you ever did;
+// otherwise the language you're writing in, then the browser's.
+const uiChosen = (() => {
+  try {
+    return JSON.parse(localStorage.getItem('desk:ui'));
+  } catch {
+    return null;
+  }
+})();
+const uiTarget = new URLSearchParams(location.hash.slice(1)).get(WRITE ? 'from' : 'to');
+const uiLang =
+  [uiChosen, uiTarget].find((l) => LANGS.includes(l)) ??
+  LANGS.find((l) => navigator.language.toLowerCase().startsWith(l)) ??
+  'en';
 const s = STRINGS[uiLang];
 document.documentElement.lang = uiLang;
 if (WRITE) {
@@ -143,6 +156,19 @@ if (WRITE) {
   document.documentElement.classList.add('write');
 }
 for (const el of document.querySelectorAll('[data-t]')) el.textContent = s[el.dataset.t];
+{
+  const pick = document.getElementById('ui-lang');
+  pick.ariaLabel = s.uiLang;
+  for (const l of ['en', 'ja', 'ko']) pick.append(new Option(LANG_NAMES[l], l, false, l === uiLang));
+  pick.addEventListener('change', () => {
+    try {
+      localStorage.setItem('desk:ui', JSON.stringify(pick.value));
+    } catch {
+      // blocked: this visit still switches
+    }
+    location.reload();
+  });
+}
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, props = {}, ...children) => {
