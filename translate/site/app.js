@@ -4,8 +4,9 @@
 // (when signed in), "Download" puts the right pane back together as a
 // markdown file, and "Send" commits it to atfedi-content as you.
 //
-// write.atfedi.de is the same desk with the same language on both sides: the
-// page as it is on the left, your own rewrite on the right.
+// write.atfedi.de is the same desk as one editor with the whole page in one
+// language. You can put another language beside it, read-only, on the left:
+// the Korean you just finished while you write the English.
 
 import { paragraphs, align, unwrap, isFence, highlight, check } from './markdown.js';
 
@@ -19,7 +20,7 @@ const STRINGS = {
     loginLabel: 'Sign in with your fediverse account — enter the server it lives on',
     loginButton: 'Sign in',
     loginHint: 'Mastodon, Misskey, GoToSocial, and most others work. We only read your account name.',
-    doc: 'Page', from: 'From', to: 'Into', lang: 'Language',
+    doc: 'Page', from: 'From', to: 'Into', lang: 'Language', beside: 'Beside it', besideNone: 'nothing',
     howto: "The left side is the source. Each paragraph lines up with its translation, but they don't have to match word for word. Write it the way your language would say it.",
     readOnly: 'read-only',
     download: 'Download',
@@ -56,7 +57,7 @@ const STRINGS = {
     loginLabel: 'フェディバースのアカウントでログイン。アカウントのあるサーバーを入れてください',
     loginButton: 'ログイン',
     loginHint: 'Mastodon、Misskey、GoToSocial など、たいていのサーバーで使えます。読むのはアカウント名だけ。',
-    doc: 'ページ', from: '原文', to: '訳す先', lang: '言語',
+    doc: 'ページ', from: '原文', to: '訳す先', lang: '言語', beside: '横に', besideNone: 'なし',
     howto: '左が原文。段落ごとに横に並びますが、一語ずつ合わせなくて大丈夫。その言語らしい言い方で。',
     readOnly: '読み取り専用',
     download: 'ダウンロード',
@@ -93,7 +94,7 @@ const STRINGS = {
     loginLabel: '페디버스 계정으로 로그인해요. 계정이 있는 서버를 적어 주세요',
     loginButton: '로그인',
     loginHint: '마스토돈, Misskey, GoToSocial 등 대부분의 서버에서 돼요. 읽는 건 계정 이름뿐이에요.',
-    doc: '페이지', from: '원문', to: '옮길 언어', lang: '언어',
+    doc: '페이지', from: '원문', to: '옮길 언어', lang: '언어', beside: '옆에', besideNone: '없음',
     howto: '왼쪽이 원문이에요. 문단마다 옆에 나란히 놓이지만, 한 단어씩 맞출 필요는 없어요. 그 언어다운 말투로 써 주세요.',
     readOnly: '읽기 전용',
     download: '내려받기',
@@ -137,6 +138,7 @@ if (WRITE) {
   document.title = 'write — atfedi.de';
   document.querySelector('.title-tag').firstChild.textContent = 'write ';
   document.getElementById('to').closest('label').hidden = true;
+  document.getElementById('beside').closest('label').hidden = false;
   // one editor with the whole page: no source pane, no paragraph rows
   document.documentElement.classList.add('write');
 }
@@ -211,6 +213,7 @@ function readHash() {
 
 function writeHash() {
   const p = new URLSearchParams({ doc: $('doc').value, from: $('from').value, to: $('to').value });
+  if (WRITE && $('beside').value) p.set('beside', $('beside').value);
   history.replaceState(null, '', `#${p}`);
 }
 
@@ -241,7 +244,22 @@ function fillLangs(doc) {
   if (WRITE) {
     from.value = have.includes(hash.from) ? hash.from : have.includes(uiLang) ? uiLang : have[0];
     to.value = from.value;
+    fillBeside(doc);
   }
+}
+
+// write: another language of the page, read-only on the left, or nothing.
+// The last choice is kept on this device, so it's there for the next page.
+function fillBeside(doc) {
+  const from = $('from').value;
+  const have = LANGS.filter((l) => doc.title[l] && l !== from);
+  const beside = $('beside');
+  beside.replaceChildren(
+    el('option', { value: '', textContent: s.besideNone }),
+    ...have.map((l) => el('option', { value: l, textContent: LANG_NAMES[l] })),
+  );
+  const want = readHash().beside ?? local.get('beside') ?? '';
+  beside.value = have.includes(want) ? want : '';
 }
 
 // --- the editors ---------------------------------------------------------------
@@ -380,6 +398,9 @@ async function renderPairs() {
   const from = $('from').value;
   if (WRITE) $('to').value = from;
   const to = $('to').value;
+  // write shows nothing on the left unless you put a language beside it
+  const left = WRITE ? $('beside').value : from;
+  document.documentElement.classList.toggle('beside', WRITE && !!left);
   writeHash();
 
   const at = ++renderCount;
@@ -387,7 +408,8 @@ async function renderPairs() {
   const refresh = () => at === renderCount && !rows.some((r) => r.touched) && renderPairs();
   const page = (lang) =>
     swr(`page:${doc.doc}:${lang}`, () => getText(`/content/${doc.doc}.${lang}.md`), refresh);
-  const [source, target] = await Promise.all([page(from), doc.title[to] ? page(to) : null]);
+  // with nothing beside it, write still checks your rewrite against the page as it is
+  const [source, target] = await Promise.all([page(left || from), doc.title[to] ? page(to) : null]);
   if (at !== renderCount) return;
   let drafts = local.get(draftKey(doc.doc, to)) ?? {};
   // drafts from when write had a row per paragraph don't fit one editor
@@ -399,7 +421,7 @@ async function renderPairs() {
   // write is one editor holding the whole page
   const whole = (md) => split(md).join('\n\n');
   const pairs = WRITE ? [[whole(source), whole(target)]] : align(split(source), split(target));
-  const left = pairs.map((p) => p[0]);
+  const srcs = pairs.map((p) => p[0]);
   const right = pairs.map((p) => p[1]);
   // a draft the page now says too has been published: let it go
   const stale = Object.keys(drafts).filter((i) => drafts[i].trim() === (right[i] ?? '').trim());
@@ -410,7 +432,7 @@ async function renderPairs() {
   const count = pairs.length;
   const name = doc.doc.split('/').pop();
 
-  $('tab-from').replaceChildren(`${name}.${from}.md`, el('span', { className: 'tag', textContent: s.readOnly }));
+  $('tab-from').replaceChildren(`${name}.${left}.md`, el('span', { className: 'tag', textContent: s.readOnly }));
   const jump = el('button', { type: 'button', className: 'small ghost', textContent: s.nextEmpty });
   jump.addEventListener('click', () => {
     const at = rows.findIndex((r) => r.el.classList.contains('active'));
@@ -430,7 +452,7 @@ async function renderPairs() {
   pane.replaceChildren();
   rows = [];
   for (let idx = 0; idx < count; idx++) {
-    const src = left[idx];
+    const src = srcs[idx];
     const draft = drafts[idx];
     const box = el('textarea', {
       value: draft ?? right[idx] ?? '',
@@ -442,7 +464,7 @@ async function renderPairs() {
     const mirror = el('pre', { className: 'mirror', ariaHidden: 'true', lang: to });
     const flag = el('span', { className: 'flag', textContent: '!' });
     const copy = el('button', { type: 'button', className: 'copy', textContent: '⇥', title: s.copySource, tabIndex: -1 });
-    const srcPre = el('pre', { lang: from });
+    const srcPre = el('pre', { lang: left || from });
     srcPre.innerHTML = highlight(src ?? '');
     const rowEl = el(
       'div',
@@ -799,7 +821,14 @@ async function start() {
     fillLangs(docs.find((d) => d.doc === pick.value));
     renderPairs();
   });
-  $('from').addEventListener('change', renderPairs);
+  $('from').addEventListener('change', () => {
+    if (WRITE) fillBeside(docs.find((d) => d.doc === pick.value));
+    renderPairs();
+  });
+  $('beside').addEventListener('change', () => {
+    local.set('beside', $('beside').value || null);
+    renderPairs();
+  });
   $('to').addEventListener('change', renderPairs);
   await renderPairs();
 }
