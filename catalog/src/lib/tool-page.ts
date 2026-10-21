@@ -38,7 +38,17 @@ export type IconMap = Record<string, string>;
 
 let icons = new Map<string, string>();
 
-const icon = (name: string): string => icons.get(name) ?? '';
+// A name with no svg draws a small dot instead of nothing, so the row keeps its
+// place and the text still lines up with its neighbours.
+const dot =
+  '<svg class="i" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="2.5"/></svg>';
+
+const icon = (name: string): string => {
+  const svg = icons.get(name);
+  if (svg) return svg;
+  console.warn(`unknown icon: ${name} (add src/assets/lucide/${name}.svg)`);
+  return dot;
+};
 
 // The icon tag renders a placeholder (Markdoc escapes raw svg); it is swapped
 // for the svg once the page is HTML.
