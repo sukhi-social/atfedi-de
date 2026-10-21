@@ -16,7 +16,7 @@
     "@fontsource/biz-udpgothic": "^5.3.0",
     "@fontsource/nanum-gothic": "^5.3.0",
     "astro": "^7.4.1",
-    "budoux": "^0.8.4",
+    "budoux": "^0.10.0",
     "micromark": "^4.0.3",
     "svelte": "^5.57.2"
   },
