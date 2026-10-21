@@ -26,5 +26,5 @@ SvelteKit 2 + adapter-static(全ページprerender)。ビルドはモノレポ�
 
 ## 開発
 
-    npm run dev --workspace museum     # 手元で
-    npm run build --workspace museum   # ../dist/museum へ
+    pnpm --filter museum run dev     # 手元で
+    pnpm --filter museum run build   # ../dist/museum へ

@@ -8,12 +8,12 @@
     "check": "astro check"
   },
   "dependencies": {
-    "@atfedi/shared": "*",
-    "@fontsource-variable/source-sans-3": "^5.2.9",
-    "astro": "^6.3.6"
+    "@atfedi/shared": "workspace:*",
+    "@fontsource-variable/source-sans-3": "^5.3.1",
+    "astro": "^7.4.1"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.9",
+    "@astrojs/check": "^0.9.11",
     "typescript": "^6.0.3"
   }
 }

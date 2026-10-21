@@ -10,15 +10,15 @@
     "check": "astro check"
   },
   "dependencies": {
-    "@astrojs/markdoc": "^1.0.5",
-    "@atfedi/shared": "*",
-    "@fontsource-variable/source-sans-3": "^5.2.9",
-    "@fontsource/biz-udpgothic": "^5.2.9",
-    "@fontsource/nanum-gothic": "^5.2.7",
-    "astro": "^6.3.6"
+    "@astrojs/markdoc": "^2.1.0",
+    "@atfedi/shared": "workspace:*",
+    "@fontsource-variable/source-sans-3": "^5.3.1",
+    "@fontsource/biz-udpgothic": "^5.3.0",
+    "@fontsource/nanum-gothic": "^5.3.0",
+    "astro": "^7.4.1"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.9",
+    "@astrojs/check": "^0.9.11",
     "typescript": "^6.0.3"
   }
 }

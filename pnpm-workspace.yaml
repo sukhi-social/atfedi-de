@@ -1,0 +1,18 @@
+packages:
+  - catalog
+  - blog
+  - kiosk
+  - danro
+  - preview
+  - shared
+  - worker
+  - museum
+  - console
+  - yum
+  - dash
+  - translate
+
+onlyBuiltDependencies:
+  - esbuild
+  - sharp
+  - workerd

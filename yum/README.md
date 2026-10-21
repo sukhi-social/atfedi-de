@@ -109,14 +109,14 @@ DM を出すこと自体が、はっきりした「置いていいよ」。だ�
 
 ```bash
 # 1. テーブル(yum_actor / yum_inbox / yum_pins)を D1 に当てる
-npx wrangler d1 execute atfedi-fedi --remote --file worker/yum/schema.sql
+pnpm exec wrangler d1 execute atfedi-fedi --remote --file worker/yum/schema.sql
 
 # 2. (任意) Naver の地域検索API — リンクから座標が取れなかったときの、名前での当て
-npx wrangler secret put NAVER_SEARCH_ID     --name atfedi
-npx wrangler secret put NAVER_SEARCH_SECRET --name atfedi
+pnpm exec wrangler secret put NAVER_SEARCH_ID     --name atfedi
+pnpm exec wrangler secret put NAVER_SEARCH_SECRET --name atfedi
 
 # 3. デプロイ
-npm run deploy:yum
+pnpm run deploy:yum
 ```
 
 2 を入れなくても動く（その段は黙って飛ばされる）。入れると、リンクから座標を
@@ -160,11 +160,11 @@ D1 から、まだ一つも無ければ `site/places.json` の種がそのまま
 モノレポの流儀どおり（`atfedi-de` ルートで）:
 
 ```bash
-npm run build            # 全世界ビルド（yum は site/ を dist/yum/ へコピー）
-npm run deploy:worker    # ひとつの Worker を再デプロイ
+pnpm run build            # 全世界ビルド（yum は site/ を dist/yum/ へコピー）
+pnpm run deploy:worker    # ひとつの Worker を再デプロイ
 
 # yum だけ入れ替えるとき:
-npm run deploy:yum
+pnpm run deploy:yum
 ```
 
 `yum.atfedi.de` は `worker/wrangler.jsonc` の routes に `custom_domain` で

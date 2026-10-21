@@ -17,7 +17,7 @@ const t0 = Date.now();
 const results = await Promise.all(
   sites.map(async (site) => {
     const t = Date.now();
-    const r = await run('npm', ['run', 'build', '--workspace', site]);
+    const r = await run('pnpm', ['--filter', site, 'run', 'build']);
     console.log(`${r.code === 0 ? 'ok  ' : 'FAIL'} ${site} ${((Date.now() - t) / 1000).toFixed(1)}s`);
     return { site, ...r };
   }),
@@ -27,7 +27,7 @@ const failed = results.filter((r) => r.code !== 0);
 for (const r of failed) console.error(`\n--- ${r.site} ---\n${r.out}`);
 if (failed.length) process.exit(1);
 
-const post = await run('npm', ['run', 'postbuild']);
+const post = await run('pnpm', ['run', 'postbuild']);
 if (post.code !== 0) {
   console.error(post.out);
   process.exit(1);

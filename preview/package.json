@@ -8,18 +8,21 @@
     "check": "astro check"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^13.5.4",
-    "@atfedi/shared": "*",
-    "@fontsource-variable/source-sans-3": "^5.2.9",
-    "@fontsource/biz-udpgothic": "^5.2.9",
-    "@fontsource/nanum-gothic": "^5.2.7",
-    "@markdoc/markdoc": "^0.5.7",
-    "astro": "^6.3.6",
+    "@astrojs/cloudflare": "^14.4.1",
+    "@atfedi/shared": "workspace:*",
+    "@fontsource-variable/source-sans-3": "^5.3.1",
+    "@fontsource/biz-udpgothic": "^5.3.0",
+    "@fontsource/nanum-gothic": "^5.3.0",
+    "@markdoc/markdoc": "^0.5.10",
+    "@shikijs/core": "^4.5.0",
+    "@shikijs/engine-javascript": "^4.5.0",
+    "@shikijs/langs": "^4.5.0",
+    "astro": "^7.4.1",
     "github-slugger": "^2.0.0",
-    "shiki": "^4.3.0"
+    "shiki": "^4.5.0"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.9",
+    "@astrojs/check": "^0.9.11",
     "typescript": "^6.0.3"
   }
 }

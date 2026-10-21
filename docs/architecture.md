@@ -56,15 +56,15 @@ atfedi-de/
   worker/    Cloudflare Worker ＋ wrangler.jsonc
   shared/    tokens.css / base.css / components.css（workspace パッケージ）
   docs/      プロジェクト全体のドキュメント（ルートに残す）
-  package.json   ルート — npm workspaces ＋ orchestration スクリプト
+  package.json   ルート — pnpm workspace（pnpm-workspace.yaml）＋ orchestration スクリプト
 ```
 
-- 道具は **npm workspaces**（npm 内蔵、追加ツールなし）。`shared/` は小さな
+- 道具は **pnpm workspace**（`packageManager` で版を固定。Node 22 の corepack で入る）。`shared/` は小さな
   workspace パッケージにし、catalog も blog も import する（相対パスの
   `../../../` を避ける）。
 - **同時 publish の仕組み** — catalog と blog の Astro `outDir` を、それぞれ
   `dist/catalog`・`dist/blog` に向ける。両ビルドがひとつの `dist/` に直接
-  書き込まれ、Worker の `assets` はその `dist/` を指す。`npm run build`
+  書き込まれ、Worker の `assets` はその `dist/` を指す。`pnpm run build`
   （両方ビルド）→ `wrangler deploy`（一回）で、二つの世界がアトミックに
   本番へ出る。ブログだけ／カタログだけの個別 publish はしない（意図どおり）。
 
@@ -74,10 +74,10 @@ atfedi-de/
 
 ### フェーズ 0 — モノレポ化（✓ 完了）
 
-いまのカタログを `catalog/` に移し、ルートに npm workspaces を設定。
+いまのカタログを `catalog/` に移し、ルートに workspace を設定（当時は npm workspaces、のち pnpm へ移行）。
 `shared/` に CSS を切り出し、catalog がそこから import するよう変更。
 `docs/` はルートに残す。
-→ verify: `npm run build` でカタログが従来どおりビルドできる
+→ verify: `pnpm run build` でカタログが従来どおりビルドできる
 
 ### フェーズ 1 — カタログをロケール・サブドメインに（✓ 完了）
 
@@ -87,7 +87,7 @@ atfedi-de/
    `/{lang}/` 接頭辞を外す。言語間リンクは `https://{l}.atfedi.de/...` の
    絶対URLに。ルートの redirect ページ `src/pages/index.astro` は削除
    （apex は Worker 担当に）。
-   → verify: `npm run build`、各言語のリンク・canonical を確認
+   → verify: `pnpm run build`、各言語のリンク・canonical を確認
 2. **Worker v1** — `{locale}.atfedi.de` をアセットに割り当て、apex を言語
    感知＋リダイレクト、`atfedi.de/{lang}/*` を 301。`wrangler.jsonc` に
    assets バインディングと routes。

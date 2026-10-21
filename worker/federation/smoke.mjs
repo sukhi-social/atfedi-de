@@ -7,7 +7,7 @@
 // this checks is our code and whichever fedify we're pinned to, which is the
 // point: run it after bumping the library, before deploying.
 //
-//   npm run test --workspace worker     (needs the blog built first)
+//   pnpm --filter worker run test     (needs the blog built first)
 //
 // It doesn't reach the network, and it never writes outside memory.
 
@@ -19,7 +19,7 @@ const MANIFEST = new URL('../../dist/blog/ap/manifest.json', HERE);
 
 if (!existsSync(MANIFEST)) {
   console.error(
-    'No built manifest at dist/blog/ap/manifest.json — run `npm run build --workspace blog` first.',
+    'No built manifest at dist/blog/ap/manifest.json — run `pnpm --filter blog run build` first.',
   );
   process.exit(1);
 }
