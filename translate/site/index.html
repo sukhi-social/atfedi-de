@@ -26,9 +26,10 @@
   </form>
 
   <nav class="pick">
-    <label><span data-t="doc"></span> <select id="doc"></select></label>
+    <label><span data-t="doc"></span> <button type="button" id="page-btn" class="pagebtn" aria-haspopup="listbox" aria-expanded="false"></button><select id="doc" hidden></select></label>
     <label><span data-t="from"></span> <select id="from"></select></label>
     <label><span data-t="to"></span> <select id="to"></select></label>
+    <div class="panel" id="page-panel" role="dialog" hidden></div>
     <label hidden><span data-t="beside"></span> <select id="beside"></select> <input type="checkbox" id="beside-on" /> <span data-t="besideShow"></span></label>
   </nav>
 

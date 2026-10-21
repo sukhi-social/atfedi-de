@@ -17,6 +17,7 @@
 import { $, WRITE, el, getJson, getText, local, readHash, s, state, swr, uiLang } from './desk.js';
 import { LANGS, LANG_NAMES } from './strings.js';
 import { renderPairs } from './editor.js';
+import { initPicker } from './picker.js';
 
 // --- who's here ------------------------------------------------------------------
 
@@ -115,6 +116,7 @@ async function start() {
     renderPairs();
   });
   $('to').addEventListener('change', renderPairs);
+  initPicker();
   await renderPairs();
 }
 

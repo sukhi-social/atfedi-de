@@ -41,6 +41,18 @@ export async function handleTranslate(request, env, ctx) {
     const docs = index.docs.map((d) => ({
       doc: d.doc,
       title: d.title,
+      lead: d.lead,
+      // per language: waiting on a person ('ai'), changed since a person sent
+      // it ('chg') or published as it is ('pub'), and when it last changed
+      files: Object.fromEntries(
+        Object.entries(d.files).map(([lang, f]) => [
+          lang,
+          {
+            state: !f.published ? 'ai' : f.published.sha256 === f.sha256 ? 'pub' : 'chg',
+            updated: f.updated,
+          },
+        ]),
+      ),
       repoPath: Object.fromEntries(Object.entries(d.files).map(([lang, f]) => [lang, f.path])),
     }));
     return json(docs);
