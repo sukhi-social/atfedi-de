@@ -9,11 +9,14 @@
   },
   "dependencies": {
     "@astrojs/cloudflare": "^13.5.4",
-    "@atfedi/shared": "*",
+    "@atfedi/shared": "workspace:*",
     "@fontsource-variable/source-sans-3": "^5.2.9",
     "@fontsource/biz-udpgothic": "^5.2.9",
     "@fontsource/nanum-gothic": "^5.2.7",
     "@markdoc/markdoc": "^0.5.7",
+    "@shikijs/core": "^4.5.0",
+    "@shikijs/engine-javascript": "^4.5.0",
+    "@shikijs/langs": "^4.5.0",
     "astro": "^6.3.6",
     "github-slugger": "^2.0.0",
     "shiki": "^4.3.0"

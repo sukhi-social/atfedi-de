@@ -36,11 +36,11 @@ frontmatter は `title` / `description` / `date` / `author`。原稿でよく踏
 ## 2. 手元で確かめる
 
 ```sh
-npm run build --workspace blog
+pnpm --filter blog run build
 ```
 
 これで Markdoc が通るか（frontmatter の欠け・構文の崩れ）まで分かる。
-見た目も見たければ `npm run dev --workspace blog`。
+見た目も見たければ `pnpm --filter blog run dev`。
 **CSS や レイアウトを触った場合はここが本番前の唯一の確認場所**
 （後述のとおり、プレビューにはスタイル変更が映らない）。
 
@@ -93,15 +93,15 @@ git push
 ```sh
 git worktree add --detach /tmp/atfedi-deploy main
 cd /tmp/atfedi-deploy
-npm ci
-npm run deploy        # 全 workspace build → wrangler deploy
+pnpm install --frozen-lockfile
+pnpm run deploy        # 全 workspace build → wrangler deploy
 cd - && git worktree remove /tmp/atfedi-deploy
 ```
 
 作業ツリーから直接 deploy しないのは、**そこに居る別の未公開下書きや
 untracked ファイルを巻き込まない**ため。worktree は main のコミットだけを
 持つので、出るものはいつも「main に入っているもの」と一致する。
-`npm run deploy` は wrangler の認証（`wrangler login` 済みか
+`pnpm run deploy` は wrangler の認証（`wrangler login` 済みか
 `CLOUDFLARE_API_TOKEN`）が要る。
 
 ## 7. 本番確認

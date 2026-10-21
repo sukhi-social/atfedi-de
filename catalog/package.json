@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@astrojs/svelte": "^8.1.1",
-    "@atfedi/shared": "*",
+    "@atfedi/shared": "workspace:*",
     "@fontsource-variable/source-sans-3": "^5.2.9",
     "@fontsource/biz-udpgothic": "^5.2.9",
     "@fontsource/nanum-gothic": "^5.2.7",

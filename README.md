@@ -34,11 +34,12 @@ The home page is a short intro plus the two doors.
 ## Commands
 
 ```sh
-npm install
-npm run dev      # local dev server
-npm run build    # static build to dist/
-npm run preview  # serve the build
-npm run check    # type-check
+corepack enable   # once; picks the pnpm version pinned in package.json
+pnpm install
+pnpm run dev      # local dev server
+pnpm run build    # static build to dist/
+pnpm run preview  # serve the build
+pnpm run check    # type-check
 ```
 
 ## Adding a tool
