@@ -7,6 +7,11 @@
 // highlighted copy under a transparent textarea, so the two must line up
 // glyph for glyph.
 
+// A line that is only a Markdoc tag: {% callout %}, {% /callout %}, or a
+// self-closing {% image src="…" /%} on its own. Such a line is a block of its
+// own, so the prose inside a callout still pairs up paragraph by paragraph.
+const TAG_LINE = /^\s*\{%\s*\/?[a-z][a-z0-9-]*\b[^%]*%\}\s*$/;
+
 // Split markdown into paragraphs at blank lines, keeping fenced blocks
 // (``` code, ::: cards) whole even when they contain blank lines.
 export function paragraphs(markdown) {
@@ -29,6 +34,9 @@ export function paragraphs(markdown) {
       flush();
       fence = open[1];
       current.push(line);
+    } else if (TAG_LINE.test(line)) {
+      flush();
+      blocks.push(line.trim());
     } else if (line.trim() === '') {
       flush();
     } else {
@@ -146,7 +154,7 @@ const span = (cls, t) => `<span class="${cls}">${t}</span>`;
 function inline(line) {
   return line
     .replace(/`[^`]+`/g, (m) => span('md-code', m))
-    .replace(/\[icon:[a-z0-9-]+\]/g, (m) => span('md-token', m))
+    .replace(/\[icon:[a-z0-9-]+\]|\{% icon [^%]*%\}/g, (m) => span('md-token', m))
     .replace(
       /\[([^\]\n]+)\]\(([^)\s]+)\)/g,
       (_, label, url) => `${span('md-mark', '[')}${span('md-link', label)}${span('md-mark', '](')}${span('md-url', url)}${span('md-mark', ')')}`,
@@ -165,6 +173,7 @@ export function highlight(block) {
     .split('\n')
     .map((raw) => {
       const line = esc(raw);
+      if (TAG_LINE.test(raw)) return span('md-mark', line);
       const h = line.match(/^(#{1,6} )(.*)$/);
       if (h) return span('md-mark', h[1]) + span('md-heading', inline(h[2]));
       const li = line.match(/^(\s*(?:[-*+]|\d+\.) )(.*)$/);
@@ -181,7 +190,11 @@ export function highlight(block) {
 // as they are (or nearly — a link may point at a localized page).
 function parts(block) {
   const urls = [...block.matchAll(/\]\(([^)\s]+)\)/g)].map((m) => m[1]);
-  const icons = block.match(/\[icon:[a-z0-9-]+\]/g) ?? [];
+  // both spellings of an icon count as the same icon
+  const icons = [
+    ...(block.match(/\[icon:[a-z0-9-]+\]/g) ?? []),
+    ...[...block.matchAll(/\{% icon name="([a-z0-9-]+)" \/%\}/g)].map((m) => `[icon:${m[1]}]`),
+  ];
   const code = block.match(/`[^`\n]+`/g) ?? [];
   const heading = block.match(/^(#{1,6}) /)?.[1].length ?? 0;
   const items = block.split('\n').filter((l) => /^\s*(?:[-*+]|\d+\.) /.test(l)).length;

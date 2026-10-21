@@ -129,6 +129,47 @@
   stroke: var(--color-text-muted);
 }
 
+/* callout — {% callout %}; a warning is for what can't be undone */
+.callout {
+  margin-top: var(--space-6);
+  padding: var(--space-3) var(--space-6) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-border-strong);
+  border-radius: var(--radius);
+}
+
+.callout-warning {
+  border-left-color: var(--color-build);
+}
+
+.callout > :first-child {
+  margin-top: var(--space-3);
+}
+
+/* small reference tables — a pipe table or {% table %}; scrolls sideways
+ * on a narrow screen instead of squeezing */
+.tool-page table {
+  display: block;
+  overflow-x: auto;
+  margin-top: var(--space-6);
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.tool-page th,
+.tool-page td {
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.tool-page th {
+  font-weight: 600;
+  border-bottom-color: var(--color-border-strong);
+}
+
 /* see-also cards — the catalog's tool cards, stacked to the column */
 .tool-page ul.link-cards {
   padding: 0;

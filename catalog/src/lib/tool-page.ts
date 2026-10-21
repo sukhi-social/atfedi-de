@@ -1,11 +1,28 @@
-import { micromark } from 'micromark';
+import Markdoc, { type Config, type Node, type RenderableTreeNode } from '@markdoc/markdoc';
 
-// Renders a tool detail page (src/content/tool-pages/**) from markdown with
-// two small extensions on top of CommonMark:
+// (a default import: the package is CommonJS, and plain node can't take
+// named values from it)
+const { Tag, Ast } = Markdoc;
+type Tag = InstanceType<typeof Markdoc.Tag>;
+
+// Renders a long-form page (atfedi-content) with Markdoc, which is CommonMark
+// plus tags, so a plain markdown page renders as it always did. The tags a
+// page can use:
 //
-//   [icon:name]        an inline Lucide icon (src/assets/lucide/name.svg)
-//   :::card … :::      a full-width "door" link-card into a subpage
-//   :::cards … :::     a .tool-grid of small cards (See-also style)
+//   {% icon name="x" /%}        an inline Lucide icon (src/assets/lucide/x.svg)
+//   {% callout %} … {% /callout %}
+//                               a boxed aside; type="warning" for things that
+//                               can't be undone (note is the default)
+//   {% card %} … {% /card %}    a full-width "door" link-card into a subpage:
+//                               one line, icon, link, description
+//   {% cards %} … {% /cards %}  a .tool-grid of small cards, one list item
+//                               each: icon, **Title**, description, links
+//   {% table %} … {% /table %}  and plain pipe tables, for small reference tables
+//
+// Two older spellings still work, because the pages already use them:
+//   [icon:name]                 = {% icon name="name" /%}
+//   :::card … :::, :::cards … :::
+//                               = {% card %}…{% /card %}, {% cards %}…{% /cards %}
 //
 // The first `## Heading` + paragraph become the page hero (kicker, h1,
 // tagline), like the blog's post head. Every h2/h3 and every bold-lead
@@ -23,60 +40,126 @@ let icons = new Map<string, string>();
 
 const icon = (name: string): string => icons.get(name) ?? '';
 
+// The icon tag renders a placeholder (Markdoc escapes raw svg); it is swapped
+// for the svg once the page is HTML.
 const injectIcons = (html: string): string =>
-  html.replace(/\[icon:([a-z0-9-]+)\]/g, (_, n) => icon(n));
+  html.replace(/<i data-icon="([a-z0-9-]+)"><\/i>/g, (_, n) => icon(n));
 
-// ---- card fences ---------------------------------------------------------
+// ---- the older spellings -------------------------------------------------
 
-const pull = (html: string, re: RegExp): [string, string] => {
-  const m = html.match(re);
-  return m ? [m[0], html.replace(m[0], '')] : ['', html];
+// Rewrites [icon:x] and ::: fences into tags, leaving fenced code and
+// inline code alone.
+const legacy = (markdown: string): string => {
+  let code = false;
+  return markdown
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map((line) => {
+      if (/^```/.test(line)) code = !code;
+      if (code || /^```/.test(line)) return line;
+      const fence = line.match(/^:::(cards|card)\s*$/);
+      if (fence) return `{% ${fence[1]} %}`;
+      if (line.trim() === ':::') return '{% /fence %}';
+      return line
+        .split(/(`[^`]*`)/)
+        .map((part, i) => (i % 2 ? part : part.replace(/\[icon:([a-z0-9-]+)\]/g, '{% icon name="$1" /%}')))
+        .join('');
+    })
+    .join('\n')
+    .replace(/\{% (cards|card) %\}([\s\S]*?)\{% \/fence %\}/g, '{% $1 %}$2{% /$1 %}');
 };
 
-// :::card — one line: [icon:x] [Title](href) — description
-const doorCard = (inner: string): string => {
-  const [svg, rest] = pull(inner, /<svg[\s\S]*?<\/svg>/);
-  const link = rest.match(/<a href="([^"]+)">([\s\S]*?)<\/a>/);
-  if (!link) return `<p>${inner}</p>`;
-  const desc = rest
-    .replace(link[0], '')
-    .replace(/^[\s—·-]+|[\s—·-]+$/g, '')
-    .trim();
-  return (
-    `<a class="door-card" href="${link[1]}">${svg}` +
-    `<span class="door-text"><span class="door-title">${link[2]}</span>` +
-    `<span class="door-desc">${desc}</span></span>${icon('arrow-right')}</a>`
-  );
+// ---- cards ---------------------------------------------------------------
+
+// Trims the space and the dash that separate a card's parts from its description (left
+// where the title and links were lifted out), then renders what is left.
+const description = (nodes: Node[], config: Config): RenderableTreeNode[] => {
+  const kept = nodes.slice();
+  const blank = (n?: Node) => n?.type === 'text' && !String(n.attributes.content).trim();
+  while (blank(kept[0])) kept.shift();
+  while (blank(kept[kept.length - 1])) kept.pop();
+  const trim = (at: number, re: RegExp) => {
+    const n = kept[at];
+    if (n?.type === 'text') {
+      const content = String(n.attributes.content).replace(re, '');
+      kept[at] = new Ast.Node('text', { content });
+    }
+  };
+  trim(0, /^[\s—·-]+/);
+  trim(kept.length - 1, /[\s—·-]+$/);
+  return new Ast.Node('inline', {}, kept).transformChildren(config);
 };
 
-// :::cards item — [icon:x] **Title** — description — [link](url) [link2](url2)
-const gridCard = (inner: string): string => {
-  const [svg, rest] = pull(inner, /<svg[\s\S]*?<\/svg>/);
-  const [title, rest2] = pull(rest, /<strong>[\s\S]*?<\/strong>/);
-  const links = [...rest2.matchAll(/<a href="[^"]+">[\s\S]*?<\/a>/g)].map((m) => m[0]);
-  let desc = rest2;
-  for (const l of links) desc = desc.replace(l, '');
-  desc = desc
-    .replace(/^[\s—·-]+|[\s—·-]+$/g, '')
-    .replace(/\s+—\s*$/, '')
-    .trim();
-  // card-title, not a bare h3: keeps card headings out of the page TOC
-  return (
-    `<li class="tool-card">` +
-    `<h3 class="card-title">${svg}${title.replace(/<\/?strong>/g, '')}</h3>` +
-    `<p class="tool-summary">${desc}</p>` +
-    `<div class="tool-links">${links.join('\n')}</div></li>`
-  );
+// the pieces of a card's one line: [icon] [link] or **strong**, the rest
+const inlineOf = (node: Node): Node[] => {
+  const p = node.walk ? [...node.walk()].find((n) => n.type === 'inline') : undefined;
+  return p ? p.children : [];
 };
 
-const renderFence = (type: string, md: string): string => {
-  const html = injectIcons(micromark(md));
-  if (type === 'card') {
-    const inner = html.match(/<p>([\s\S]*?)<\/p>/);
-    return inner ? doorCard(inner[1]) : html;
-  }
-  const items = [...html.matchAll(/<li>([\s\S]*?)<\/li>/g)].map((m) => gridCard(m[1]));
-  return `<ul class="tool-grid link-cards">\n${items.join('\n')}\n</ul>`;
+const takeIcon = (nodes: Node[]): [RenderableTreeNode, Node[]] => {
+  const at = nodes.findIndex((n) => n.type === 'tag' && n.tag === 'icon');
+  if (at < 0) return ['', nodes];
+  return [new Tag('i', { 'data-icon': nodes[at].attributes.name }), nodes.filter((_, i) => i !== at)];
+};
+
+// {% card %} — one line: icon, [Title](href), description
+const doorCard = (node: Node, config: Config): RenderableTreeNode => {
+  const [svg, rest] = takeIcon(inlineOf(node));
+  const at = rest.findIndex((n) => n.type === 'link');
+  if (at < 0) return new Tag('p', {}, new Ast.Node('inline', {}, rest).transformChildren(config));
+  const link = rest[at];
+  const desc = description(rest.filter((_, i) => i !== at), config);
+  return new Tag('a', { class: 'door-card', href: link.attributes.href }, [
+    svg,
+    new Tag('span', { class: 'door-text' }, [
+      new Tag('span', { class: 'door-title' }, link.transformChildren(config)),
+      new Tag('span', { class: 'door-desc' }, desc),
+    ]),
+    new Tag('i', { 'data-icon': 'arrow-right' }),
+  ]);
+};
+
+// {% cards %} item — icon, **Title**, description, links
+const gridCard = (item: Node, config: Config): RenderableTreeNode => {
+  const nodes = item.children.flatMap((c) => (c.type === 'inline' ? c.children : (c.children[0]?.children ?? [])));
+  const [svg, rest] = takeIcon(nodes);
+  const at = rest.findIndex((n) => n.type === 'strong');
+  const title = at >= 0 ? rest[at].transformChildren(config) : [];
+  const links = rest.filter((n) => n.type === 'link');
+  const others = rest.filter((n, i) => i !== at && n.type !== 'link');
+  return new Tag('li', { class: 'tool-card' }, [
+    new Tag('h3', { class: 'card-title' }, [svg, ...title]),
+    new Tag('p', { class: 'tool-summary' }, description(others, config)),
+    new Tag('div', { class: 'tool-links' }, links.map((l) => new Tag('a', { href: l.attributes.href }, l.transformChildren(config)))),
+  ]);
+};
+
+// ---- the tags ------------------------------------------------------------
+
+const config: Config = {
+  tags: {
+    icon: {
+      inline: true,
+      selfClosing: true,
+      attributes: { name: { type: String, required: true } },
+      transform: (node) => new Tag('i', { 'data-icon': node.attributes.name }),
+    },
+    callout: {
+      attributes: { type: { type: String, default: 'note', matches: ['note', 'warning'] } },
+      transform: (node, config) =>
+        new Tag('aside', { class: `callout callout-${node.transformAttributes(config).type}` }, node.transformChildren(config)),
+    },
+    card: {
+      transform: (node, config) => doorCard(node, config),
+    },
+    cards: {
+      transform: (node, config) => {
+        const list = node.children.find((c) => c.type === 'list');
+        const items = (list?.children ?? []).map((item) => gridCard(item, config));
+        return new Tag('ul', { class: 'tool-grid link-cards' }, items);
+      },
+    },
+  },
 };
 
 // ---- hero ----------------------------------------------------------------
@@ -99,9 +182,9 @@ const heroize = (
     },
   );
   // the cover's meta chips: the icon paragraph directly after the hero
-  // (runs before icon injection, so it still reads [icon:] notation)
+  // (runs before icon injection, so the icons are still placeholders)
   html = html.replace(
-    /(<\/header>)\n<p>(\[icon:[\s\S]*?)<\/p>/,
+    /(<\/header>)\n<p>(<i data-icon=[\s\S]*?)<\/p>/,
     '$1\n<p class="meta-row">$2</p>',
   );
   return { html, title, tagline };
@@ -173,17 +256,21 @@ export interface ToolPage {
 
 export const renderToolPage = (markdown: string, kicker: string, iconMap: IconMap): ToolPage => {
   icons = new Map(Object.entries(iconMap));
-  // Lift card fences out before micromark, drop rendered HTML back in after.
-  const fences: string[] = [];
-  const body = markdown.replace(/:::(cards|card)\n([\s\S]*?)\n:::/g, (_, type, md) => {
-    fences.push(renderFence(type, md));
-    return `%%FENCE${fences.length - 1}%%`;
-  });
+  const tree = Markdoc.transform(Markdoc.parse(legacy(markdown)), config);
+  const blocks = Array.isArray((tree as Tag).children) ? (tree as Tag).children : [tree];
   // pictures (![alt](/media/…), uploaded from the desk) load as you scroll
-  let html = micromark(body).replace(/<img /g, '<img loading="lazy" decoding="async" ');
+  let html = blocks
+    .map((b) => Markdoc.renderers.html(b))
+    .join('\n')
+    .replace(/<img /g, '<img loading="lazy" decoding="async" ');
   const hero = heroize(html, kicker);
   html = injectIcons(hero.html);
-  html = html.replace(/<p>%%FENCE(\d+)%%<\/p>/g, (_, i) => fences[+i]);
-  const { html: bodyHtml, toc } = tocify(html);
+  // a bold lead inside a callout is its warning, not a section: keep the
+  // callouts out of the table of contents
+  const callouts: string[] = [];
+  html = html.replace(/<aside class="callout[\s\S]*?<\/aside>/g, (m) => `%%CALLOUT${callouts.push(m) - 1}%%`);
+  const tocked = tocify(html);
+  const toc = tocked.toc;
+  const bodyHtml = tocked.html.replace(/%%CALLOUT(\d+)%%/g, (_, i) => callouts[+i]);
   return { html: bodyHtml, toc, title: hero.title, tagline: hero.tagline };
 };
