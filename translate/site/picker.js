@@ -19,6 +19,9 @@ const kindOf = (doc) => (doc.startsWith('basics/') ? 'basics' : doc.startsWith('
 // a page's worst state across its languages: waiting on a person, changed
 // since a person sent it, or published as it is
 function stateOf(d) {
+  // a page list cached before the Worker sent states has none: say so, rather
+  // than call everything published
+  if (!d.files) return 'unknown';
   const have = Object.values(d.files ?? {}).map((f) => f.state);
   return have.includes('ai') ? 'needs' : have.includes('chg') ? 'changed' : 'published';
 }
@@ -84,6 +87,12 @@ export function initPicker() {
     button.replaceChildren(el('span', { className: 'cur', textContent: d ? titleOf(d) : '' }), el('kbd', { textContent: '/' }));
   };
   showTitle();
+
+  // the page list refreshed behind the cached one: show the new states
+  document.addEventListener('docs-fresh', () => {
+    showTitle();
+    if (ui.open) render();
+  });
 
   const choose = (d, lang) => {
     close();
@@ -202,7 +211,7 @@ export function initPicker() {
       const mine = found.filter((d) => drafts.has(d.doc)).sort(byRecent);
       groups.push([p.onDevice, mine]);
       const rest = found.filter((d) => !drafts.has(d.doc));
-      for (const [st, label] of [['needs', p.groupNeeds], ['changed', p.groupChanged], ['published', p.groupPublished]]) {
+      for (const [st, label] of [['needs', p.groupNeeds], ['changed', p.groupChanged], ['published', p.groupPublished], ['unknown', p.checking]]) {
         groups.push([label, rest.filter((d) => stateOf(d) === st).sort(byRecent)]);
       }
     }

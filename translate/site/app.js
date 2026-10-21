@@ -78,7 +78,10 @@ async function start() {
       renderWho();
       renderPairs();
     }),
-    swr('docs', () => getJson('/docs.json').catch(() => null)),
+    swr('docs', () => getJson('/docs.json').catch(() => null), (v) => {
+      state.docs = v;
+      document.dispatchEvent(new Event('docs-fresh'));
+    }),
   ]);
   setWho(who);
   state.docs ??= [];
