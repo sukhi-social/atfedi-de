@@ -6,6 +6,7 @@
 // (catalog/src/lib/tool-page.ts), and fills the shell with HTMLRewriter.
 //
 //   /basics/<slug>/            content basics/<slug>
+//   /about/                    content about/about
 //   /build/<tool>/[<page>/]    content tool-pages/<tool>/<page|index>,
 //                              for tools whose catalog entry has a `page`
 //   /                          the basics cards, from index.json
@@ -35,6 +36,15 @@ async function resolve(env, url, lang, path) {
       shell: `/catalog/${lang}/doc-shell/`,
       lane: 'use',
       kicker: t(lang, 'basics.heading'),
+      title: (p) => `${p.title} — atfedi.de`,
+    };
+  }
+  if (path === '/about/') {
+    return {
+      doc: 'about/about',
+      shell: `/catalog/${lang}/doc-shell/`,
+      lane: 'use',
+      kicker: t(lang, 'about.heading'),
       title: (p) => `${p.title} — atfedi.de`,
     };
   }
@@ -207,6 +217,7 @@ export async function serveSitemap(request, env, url, lang, assetPath) {
     .filter((d) => shown(d, lang))
     .map((d) => {
       if (d.doc.startsWith('basics/')) return `/basics/${d.doc.slice(7)}/`;
+      if (d.doc === 'about/about') return '/about/';
       const m = d.doc.match(/^(tool-pages\/[a-z0-9-]+)\/([a-z0-9-]+)$/);
       const base = m && byContent[m[1]];
       if (!base) return null;
