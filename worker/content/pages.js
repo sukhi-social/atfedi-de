@@ -8,8 +8,16 @@
 //   /basics/<slug>/            content basics/<slug>
 //   /build/<tool>/[<page>/]    content tool-pages/<tool>/<page|index>,
 //                              for tools whose catalog entry has a `page`
-//   /                          the basics cards, from index.json
+//   /about/                    content about/about
+//   /                          the basics cards, from index.json, and the
+//                              greeting from pages/home when a person has
+//                              sent it from write (the build has the same
+//                              words as a fallback)
 //   /sitemap.xml               plus every page above
+//
+// The blog's support and llm pages come from pages/support and pages/llm the
+// same way (serveBlogDoc); until a person has sent one from write, the blog
+// keeps its own copy.
 
 import { renderToolPage } from '../../catalog/src/lib/tool-page.ts';
 import { ui, defaultLocale, localeNames } from '../../catalog/src/i18n/ui.ts';
@@ -35,6 +43,15 @@ async function resolve(env, url, lang, path) {
       shell: `/catalog/${lang}/doc-shell/`,
       lane: 'use',
       kicker: t(lang, 'basics.heading'),
+      title: (p) => `${p.title} — atfedi.de`,
+    };
+  }
+  if (path === '/about/') {
+    return {
+      doc: 'about/about',
+      shell: `/catalog/${lang}/doc-shell/`,
+      lane: 'use',
+      kicker: 'atfedi.de',
       title: (p) => `${p.title} — atfedi.de`,
     };
   }
@@ -171,11 +188,30 @@ function draftPage(lang, route, entry, path) {
 // draft no one has sent from write yet.
 const shown = (d, lang) => d.files?.[lang]?.published ?? null;
 
-/** The home page with its basics cards filled in. */
+// The greeting, from pages/home: `## hello`, the hug, the small line, then
+// `### heading` and the intro. A part that is missing keeps the build's words.
+function homeParts(html) {
+  const hello = html.match(/<h1>([\s\S]*?)<\/h1><p class="tagline">([\s\S]*?)<\/p><\/header>/);
+  const small = html.match(/<\/header>\s*<p>([\s\S]*?)<\/p>/);
+  const intro = html.match(/<h3[^>]*>([\s\S]*?)<\/h3>\s*<p>([\s\S]*?)<\/p>/);
+  return {
+    hello: hello?.[1],
+    hug: hello?.[2],
+    small: small?.[1],
+    introHeading: intro?.[1],
+    intro: intro?.[2],
+  };
+}
+
+const swap = (html) => ({ element: (e) => html != null && e.setInnerContent(html, { html: true }) });
+
+/** The home page with its basics cards and greeting filled in. */
 export async function serveHome(request, env, url, lang, assetPath) {
-  const [res, index] = await Promise.all([
+  const [res, index, markdown, site] = await Promise.all([
     env.ASSETS.fetch(new Request(new URL(assetPath, url), request)),
     contentIndex(env),
+    contentFile(env, 'pages/home', lang, { published: true }),
+    siteData(env, url),
   ]);
   if (!res.ok) return res;
   const cards = index.docs
@@ -186,8 +222,53 @@ export async function serveHome(request, env, url, lang, assetPath) {
         `<h3>${esc(shown(d, lang).title)}</h3><p>${esc(shown(d, lang).lead ?? '')}</p></a>`,
     )
     .join('');
+  const home = markdown === null ? {} : homeParts(renderToolPage(markdown, '', site.icons).html);
+  const credits = index.docs.find((d) => d.doc === 'pages/home')?.files?.[lang]?.published?.credits;
   const out = new HTMLRewriter()
     .on('[data-basics]', { element: (e) => e.setInnerContent(cards, { html: true }) })
+    .on('[data-home-hello]', swap(home.hello))
+    .on('[data-home-hug]', swap(home.hug))
+    .on('[data-home-small]', swap(home.small))
+    .on('[data-home-intro-heading]', swap(home.introHeading))
+    .on('[data-home-intro]', swap(home.intro))
+    .on('[data-home-credits]', { element: (e) => e.setInnerContent(creditsHtml(lang, 'pages/home', credits), { html: true }) })
+    .transform(res);
+  const headers = new Headers(out.headers);
+  headers.set('cache-control', 'public, max-age=60');
+  return new Response(out.body, { status: res.status, headers });
+}
+
+/**
+ * One of the blog's own pages (support, llm) from pages/<name>, or null while
+ * no person has sent it from write; then the blog's built copy is served.
+ * The built page is the frame: its article gets the words.
+ */
+export async function serveBlogDoc(request, env, url, lang, name, fetchStatic) {
+  const doc = `pages/${name}`;
+  const [markdown, index] = await Promise.all([
+    contentFile(env, doc, lang, { published: true }),
+    contentIndex(env),
+  ]);
+  if (markdown === null) return null;
+  const res = await fetchStatic(request);
+  if (!res.ok) return res;
+  const site = await siteData(env, url);
+  const page = renderToolPage(markdown, '', site.icons);
+  const credits = index.docs.find((d) => d.doc === doc)?.files?.[lang]?.published?.credits;
+  // the blog's articles use h2 for their sections, with the title as h1
+  const body = page.html
+    .replace(
+      /^<header class="hero">[\s\S]*?<h1>([\s\S]*?)<\/h1><p class="tagline">([\s\S]*?)<\/p><\/header>/,
+      '<header class="post-head"><h1>$1</h1></header><p>$2</p>',
+    )
+    .replace(/<(\/?)h3/g, '<$1h2');
+  const out = new HTMLRewriter()
+    .on('title', { element: (e) => e.setInnerContent(`${page.title} — atfedi.de blog`) })
+    .on('meta[property="og:title"]', { element: (e) => e.setAttribute('content', `${page.title} — atfedi.de blog`) })
+    .on('meta[name="description"], meta[property="og:description"]', {
+      element: (e) => e.setAttribute('content', page.tagline),
+    })
+    .on('article.post', { element: (e) => e.setInnerContent(body + creditsHtml(lang, doc, credits), { html: true }) })
     .transform(res);
   const headers = new Headers(out.headers);
   headers.set('cache-control', 'public, max-age=60');
@@ -207,6 +288,7 @@ export async function serveSitemap(request, env, url, lang, assetPath) {
     .filter((d) => shown(d, lang))
     .map((d) => {
       if (d.doc.startsWith('basics/')) return `/basics/${d.doc.slice(7)}/`;
+      if (d.doc === 'about/about') return '/about/';
       const m = d.doc.match(/^(tool-pages\/[a-z0-9-]+)\/([a-z0-9-]+)$/);
       const base = m && byContent[m[1]];
       if (!base) return null;

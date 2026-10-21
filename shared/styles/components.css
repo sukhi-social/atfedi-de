@@ -351,3 +351,14 @@
     padding-block: var(--space-8) var(--space-6);
   }
 }
+
+/* who wrote a page of atfedi-content, and the way in to rewrite it (filled in
+ * by the Worker, on the doc pages, the home page and the blog's own pages) */
+.doc-credits {
+  margin-top: var(--space-6);
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+.doc-credits + .doc-credits {
+  margin-top: var(--space-2);
+}

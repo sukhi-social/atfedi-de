@@ -37,7 +37,7 @@ import { handlePlaces } from './yum/places.js';
 import { handleYumEditor } from './yum/editor.js';
 import { handleDash } from './dash/index.js';
 import { handleTranslate } from './translate/index.js';
-import { serveDocPage, serveHome, serveSitemap } from './content/pages.js';
+import { serveBlogDoc, serveDocPage, serveHome, serveSitemap } from './content/pages.js';
 import { serveMedia } from './content/store.js';
 import { serveBlogPage } from './blog/live.js';
 
@@ -306,6 +306,15 @@ export default {
       if (!path.endsWith('/') && !/\.[^/]+$/.test(path)) path += '/';
       // The build holds every post, drafts too; what's on the site is decided
       // in D1, and the pages (and the sitemap) are served minus the rest.
+      // support and llm are written in write (atfedi-content pages/<name>);
+      // the built page is the fallback until a person has sent them
+      const own = path.match(/^\/(en|ja|ko)\/(support|llm)\/$/);
+      if (own) {
+        const page = await serveBlogDoc(request, env, url, own[1], own[2], (req) =>
+          serveAsset(env, url, `/blog${path}`, req),
+        );
+        if (page) return page;
+      }
       return serveBlogPage(env, path, request, (req) =>
         serveAsset(env, url, `/blog${path}`, req),
       );
