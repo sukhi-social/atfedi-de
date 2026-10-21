@@ -213,16 +213,6 @@
   }
 }
 
-/* who wrote the page (filled in by the Worker from atfedi-content's history) */
-.tool-page .doc-credits {
-  margin-top: var(--space-6);
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
-}
-.tool-page .doc-credits + .doc-credits {
-  margin-top: var(--space-2);
-}
-
 .tool-page img {
   display: block;
   max-width: 100%;

@@ -16,9 +16,9 @@ const t = useTranslations(lang);
   <div class="wrap">
     <section class="welcome">
       <div class="welcome-text stack">
-        <h1><Phrase text={t('home.hello')} lang={lang} /></h1>
-        <p class="hug"><Phrase text={t('home.hug')} lang={lang} /></p>
-        <p class="tagline"><Phrase text={t('home.hugSmall')} lang={lang} /></p>
+        <h1 data-home-hello><Phrase text={t('home.hello')} lang={lang} /></h1>
+        <p class="hug" data-home-hug><Phrase text={t('home.hug')} lang={lang} /></p>
+        <p class="tagline" data-home-small><Phrase text={t('home.hugSmall')} lang={lang} /></p>
       </div>
     </section>
 
@@ -30,8 +30,8 @@ const t = useTranslations(lang);
     </section>
 
     <section class="section prose stack">
-      <h2 class="section-title">{t('intro.heading')}</h2>
-      <p><Phrase text={t('intro.body')} lang={lang} /></p>
+      <h2 class="section-title" data-home-intro-heading>{t('intro.heading')}</h2>
+      <p data-home-intro><Phrase text={t('intro.body')} lang={lang} /></p>
     </section>
 
     <section class="section stack">
@@ -49,5 +49,8 @@ const t = useTranslations(lang);
         · <a href="/build/">{t('lane.build.name')}</a>
       </p>
     </section>
+
+    <!-- who wrote the greeting, and the way in to rewrite it: filled by the Worker -->
+    <div data-home-credits></div>
   </div>
 </Base>
