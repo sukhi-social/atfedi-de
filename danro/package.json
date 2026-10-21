@@ -9,11 +9,11 @@
   },
   "dependencies": {
     "@atfedi/shared": "workspace:*",
-    "@fontsource-variable/source-sans-3": "^5.2.9",
-    "astro": "^6.3.6"
+    "@fontsource-variable/source-sans-3": "^5.3.1",
+    "astro": "^6.4.8"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.9",
+    "@astrojs/check": "^0.9.11",
     "typescript": "^6.0.3"
   }
 }

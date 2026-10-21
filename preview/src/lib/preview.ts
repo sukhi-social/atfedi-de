@@ -13,7 +13,7 @@
 // markdown-it's `html: false`, so raw HTML in a post is escaped to text —
 // a PR's contents are not trusted.
 
-import Markdoc, { type RenderableTreeNode } from '@markdoc/markdoc';
+import Markdoc, { type RenderableTreeNode, type NodeType, type Schema } from '@markdoc/markdoc';
 import GithubSlugger from 'github-slugger';
 import { createHighlighterCore, createCssVariablesTheme, type HighlighterCore } from '@shikijs/core';
 import { createJavaScriptRegexEngine } from '@shikijs/engine-javascript';
@@ -189,14 +189,14 @@ async function authorIsAi(src: Source, lang: string, id: string): Promise<boolea
 
 function textOf(node: RenderableTreeNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node);
-  if (node !== null && typeof node === 'object' && 'children' in node)
+  if (node !== null && typeof node === 'object' && 'children' in node && Array.isArray(node.children))
     return node.children.map(textOf).join('');
   return '';
 }
 
-function headingNodeFor(slugger: GithubSlugger, headings: PreviewHeading[]) {
+function headingNodeFor(slugger: GithubSlugger, headings: PreviewHeading[]): Schema {
   return {
-    children: ['inline'],
+    children: ['inline'] as NodeType[],
     attributes: {
       id: { type: String },
       level: { type: Number, required: true, default: 1 },

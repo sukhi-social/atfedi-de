@@ -9,11 +9,12 @@
     "test": "node --disable-warning=ExperimentalWarning federation/smoke.mjs"
   },
   "dependencies": {
-    "@fedify/fedify": "^2.3.6",
+    "@fedify/fedify": "^2.4.4",
     "@js-temporal/polyfill": "^0.5.1",
-    "xss": "^1.0.15"
+    "@opentelemetry/api": "~1.9.1",
+    "xss": "^1.0.16"
   },
   "devDependencies": {
-    "wrangler": "^4.93.1"
+    "wrangler": "^4.151.3"
   }
 }
