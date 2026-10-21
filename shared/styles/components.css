@@ -322,3 +322,83 @@
   border-radius: var(--radius-sm);
   white-space: nowrap;
 }
+
+/* ---- home: the welcome ---- */
+.welcome {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding-block: var(--space-12) var(--space-8);
+}
+
+.welcome-text {
+  max-width: var(--measure);
+}
+
+.welcome h1 {
+  font-size: var(--text-2xl);
+  letter-spacing: -0.015em;
+  line-height: 1.18;
+}
+
+.welcome .hug {
+  font-size: var(--text-lg);
+}
+
+.welcome .tagline {
+  color: var(--color-text-muted);
+}
+
+.buddy {
+  flex: none;
+  width: 11rem;
+  height: auto;
+  fill: none;
+  stroke: var(--color-text);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.buddy .fill {
+  fill: var(--color-surface);
+}
+
+.buddy .cheek {
+  fill: var(--color-border);
+  stroke: none;
+}
+
+/* the tail wags a few times when the page opens, then rests */
+.buddy-tail {
+  transform-origin: 140px 150px;
+  animation: wag 0.5s ease-in-out 0.4s 6 alternate;
+}
+
+@keyframes wag {
+  from {
+    transform: rotate(-9deg);
+  }
+  to {
+    transform: rotate(9deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .buddy-tail {
+    animation: none;
+  }
+}
+
+@media (max-width: 40rem) {
+  .welcome {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-6);
+    padding-block: var(--space-8) var(--space-6);
+  }
+
+  .buddy {
+    width: 8rem;
+  }
+}

@@ -12,16 +12,30 @@ const lang = Astro.params.lang as Locale;
 const t = useTranslations(lang);
 ---
 
-<Base lang={lang} title="atfedi.de" description={t('site.tagline')}>
+<Base lang={lang} title="atfedi.de" description={t('home.hug')}>
   <div class="wrap">
-    <section class="hero stack">
-      <h1><Phrase text={t('home.headline')} lang={lang} /></h1>
-      <p class="tagline"><Phrase text={t('site.tagline')} lang={lang} /></p>
-    </section>
-
-    <section class="prose stack">
-      <h2 class="section-title">{t('intro.heading')}</h2>
-      <p><Phrase text={t('intro.body')} lang={lang} /></p>
+    <section class="welcome">
+      <svg class="buddy" viewBox="0 0 200 180" role="img" aria-label={t('home.mascot')}>
+        <g class="buddy-tail">
+          <path d="M140 150 C172 150 182 122 170 100" />
+        </g>
+        <ellipse class="fill" cx="100" cy="142" rx="50" ry="36" />
+        <path d="M54 132 C24 128 14 100 24 76" />
+        <path d="M146 132 C176 128 186 100 176 76" />
+        <path class="fill" d="M66 56 L62 20 L92 40 Z" />
+        <path class="fill" d="M134 56 L138 20 L108 40 Z" />
+        <circle class="fill" cx="100" cy="82" r="42" />
+        <path d="M80 80 q7 -8 14 0" />
+        <path d="M106 80 q7 -8 14 0" />
+        <path d="M93 96 q7 7 14 0" />
+        <circle class="cheek" cx="76" cy="94" r="5" />
+        <circle class="cheek" cx="124" cy="94" r="5" />
+      </svg>
+      <div class="welcome-text stack">
+        <h1><Phrase text={t('home.hello')} lang={lang} /></h1>
+        <p class="hug"><Phrase text={t('home.hug')} lang={lang} /></p>
+        <p class="tagline"><Phrase text={t('home.hugSmall')} lang={lang} /></p>
+      </div>
     </section>
 
     <section class="section stack">
@@ -31,21 +45,12 @@ const t = useTranslations(lang);
       <div class="doors" data-basics></div>
     </section>
 
-    <section class="section stack">
-      <h2 class="section-title">{t('doors.heading')}</h2>
-      <div class="doors">
-        <a class="lane-door" data-lane="use" href="/use/">
-          <h3>{t('lane.use.name')}</h3>
-          <p><Phrase text={t('lane.use.desc')} lang={lang} /></p>
-        </a>
-        <a class="lane-door" data-lane="build" href="/build/">
-          <h3>{t('lane.build.name')}</h3>
-          <p><Phrase text={t('lane.build.desc')} lang={lang} /></p>
-        </a>
-      </div>
+    <section class="prose stack">
+      <h2 class="section-title">{t('intro.heading')}</h2>
+      <p><Phrase text={t('intro.body')} lang={lang} /></p>
     </section>
 
-    <section class="section">
+    <section class="section stack">
       <p class="note">
         <Phrase text={t('home.platforms')} lang={lang} />
         <a href="https://joinfediverse.kr">joinfediverse.kr</a>
@@ -53,6 +58,11 @@ const t = useTranslations(lang);
       <p class="note">
         <Phrase text={t('home.catalog')} lang={lang} />
         <a href="https://fedidb.org">FediDB</a>
+      </p>
+      <p class="note">
+        {t('home.tools')}
+        <a href="/use/">{t('lane.use.name')}</a>
+        · <a href="/build/">{t('lane.build.name')}</a>
       </p>
     </section>
   </div>
