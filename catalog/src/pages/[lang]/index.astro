@@ -12,16 +12,14 @@ const lang = Astro.params.lang as Locale;
 const t = useTranslations(lang);
 ---
 
-<Base lang={lang} title="atfedi.de" description={t('site.tagline')}>
+<Base lang={lang} title="atfedi.de" description={t('home.hug')}>
   <div class="wrap">
-    <section class="hero stack">
-      <h1><Phrase text={t('home.headline')} lang={lang} /></h1>
-      <p class="tagline"><Phrase text={t('site.tagline')} lang={lang} /></p>
-    </section>
-
-    <section class="prose stack">
-      <h2 class="section-title">{t('intro.heading')}</h2>
-      <p><Phrase text={t('intro.body')} lang={lang} /></p>
+    <section class="welcome">
+      <div class="welcome-text stack">
+        <h1><Phrase text={t('home.hello')} lang={lang} /></h1>
+        <p class="hug"><Phrase text={t('home.hug')} lang={lang} /></p>
+        <p class="tagline"><Phrase text={t('home.hugSmall')} lang={lang} /></p>
+      </div>
     </section>
 
     <section class="section stack">
@@ -31,21 +29,12 @@ const t = useTranslations(lang);
       <div class="doors" data-basics></div>
     </section>
 
-    <section class="section stack">
-      <h2 class="section-title">{t('doors.heading')}</h2>
-      <div class="doors">
-        <a class="lane-door" data-lane="use" href="/use/">
-          <h3>{t('lane.use.name')}</h3>
-          <p><Phrase text={t('lane.use.desc')} lang={lang} /></p>
-        </a>
-        <a class="lane-door" data-lane="build" href="/build/">
-          <h3>{t('lane.build.name')}</h3>
-          <p><Phrase text={t('lane.build.desc')} lang={lang} /></p>
-        </a>
-      </div>
+    <section class="prose stack">
+      <h2 class="section-title">{t('intro.heading')}</h2>
+      <p><Phrase text={t('intro.body')} lang={lang} /></p>
     </section>
 
-    <section class="section">
+    <section class="section stack">
       <p class="note">
         <Phrase text={t('home.platforms')} lang={lang} />
         <a href="https://joinfediverse.kr">joinfediverse.kr</a>
@@ -53,6 +42,11 @@ const t = useTranslations(lang);
       <p class="note">
         <Phrase text={t('home.catalog')} lang={lang} />
         <a href="https://fedidb.org">FediDB</a>
+      </p>
+      <p class="note">
+        {t('home.tools')}
+        <a href="/use/">{t('lane.use.name')}</a>
+        · <a href="/build/">{t('lane.build.name')}</a>
       </p>
     </section>
   </div>
