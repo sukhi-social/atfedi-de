@@ -10,12 +10,12 @@
     "check": "astro check"
   },
   "dependencies": {
-    "@astrojs/svelte": "^8.1.2",
+    "@astrojs/svelte": "^9.1.0",
     "@atfedi/shared": "workspace:*",
     "@fontsource-variable/source-sans-3": "^5.3.1",
     "@fontsource/biz-udpgothic": "^5.3.0",
     "@fontsource/nanum-gothic": "^5.3.0",
-    "astro": "^6.4.8",
+    "astro": "^7.4.1",
     "budoux": "^0.8.4",
     "micromark": "^4.0.3",
     "svelte": "^5.57.2"
