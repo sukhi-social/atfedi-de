@@ -13,6 +13,7 @@ import { handleLogin, handleCallback, handleLogout, sessionHandle } from './auth
 import { listDrafts, putDraft, clearDrafts, putSend, getSend, hasAgreed, putAgreed } from './store.js';
 import { contentIndex, contentFile, serveMedia, stageMedia, stagedMedia, MEDIA_TYPES } from '../content/store.js';
 import { sendPage } from '../content/github.js';
+import { handleBlogDesk, isBlogEditor } from './blog.js';
 
 const LANGS = new Set(['en', 'ja', 'ko']);
 const MAX_INDEX = 2000;
@@ -89,7 +90,12 @@ export async function handleTranslate(request, env, ctx) {
 
   if (path === '/api/me') {
     const handle = await sessionHandle(request, env);
-    return json({ handle, cc0: handle ? await hasAgreed(env.FEDI_DB, handle) : false });
+    return json({
+      handle,
+      cc0: handle ? await hasAgreed(env.FEDI_DB, handle) : false,
+      // write only: this account may edit the blog's posts, at /blog/
+      blog: new URL(request.url).hostname.startsWith('write.') && isBlogEditor(env, handle),
+    });
   }
 
   // "What I send is CC0", ticked once beside the Send button.
@@ -199,8 +205,17 @@ export async function handleTranslate(request, env, ctx) {
     return row ? json(row) : json({ error: 'not found' }, 404);
   }
 
+  // write.atfedi.de/blog/: the blog's posts, for BLOG_EDITORS only (blog.js)
+  if (url.hostname.startsWith('write.')) {
+    const blog = await handleBlogDesk(request, env, await sessionHandle(request, env), json);
+    if (blog) return blog;
+  } else if (path === '/blog' || path.startsWith('/blog/')) {
+    return new Response('Not found', { status: 404 }); // translate has no blog page
+  }
+
   // everything else: the static desk
   let assetPath = path;
+  if (path === '/blog') return Response.redirect(`${url.origin}/blog/`, 301);
   if (!assetPath.endsWith('/') && !/\.[^/]+$/.test(assetPath)) assetPath += '/';
   const res = await env.ASSETS.fetch(new Request(new URL(`/translate${assetPath}`, request.url), request));
   const headers = new Headers(res.headers);

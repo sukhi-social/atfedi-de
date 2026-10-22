@@ -21,7 +21,7 @@ const API = 'https://api.github.com';
 // Commit emails that mean "an AI wrote this", and the name it goes by.
 const AI_AUTHORS = { 'noreply@anthropic.com': 'Claude' };
 
-async function gh(env, method, path, body) {
+export async function gh(env, method, path, body) {
   const res = await fetch(`${API}${path}`, {
     method,
     headers: {
@@ -52,7 +52,7 @@ const publishers = (env) =>
       .filter(Boolean),
   );
 
-const b64 = (data) => {
+export const b64 = (data) => {
   const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : new Uint8Array(data);
   let bin = '';
   for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));

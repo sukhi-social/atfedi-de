@@ -27,6 +27,8 @@ function renderWho() {
   if (state.me) {
     who.append(`${s.signedIn} ${state.me}`, el('a', { href: '/logout', textContent: s.logout }));
     $('login').hidden = true;
+    // the blog's posts have their own page, for the accounts that may edit them
+    if (WRITE && state.blog) who.append(el('a', { href: '/blog/', textContent: 'blog' }));
   } else {
     $('login').hidden = false;
   }
@@ -70,6 +72,7 @@ async function start() {
   const setWho = (v) => {
     state.me = v?.handle || null;
     state.agreed = !!(state.me && v.cc0);
+    state.blog = !!(state.me && v?.blog);
   };
   let who;
   [who, state.docs] = await Promise.all([
