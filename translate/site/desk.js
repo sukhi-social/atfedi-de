@@ -5,6 +5,8 @@
 import { LANGS, LANG_NAMES, STRINGS } from './strings.js';
 
 export const WRITE = location.hostname.startsWith('write.');
+// write.atfedi.de/blog/: the same desk on the blog's posts (editors only)
+export const BLOG = WRITE && location.pathname.startsWith('/blog');
 
 // The desk speaks the language you picked in its corner, if you ever did;
 // otherwise the language you're writing in, then the browser's.
@@ -26,7 +28,7 @@ if (WRITE) {
   s.tagline = s.writeTagline;
   s.howto = s.writeHowto;
   s.from = s.lang;
-  document.title = 'write — atfedi.de';
+  document.title = BLOG ? 'write / blog — atfedi.de' : 'write — atfedi.de';
   document.querySelector('.title-tag').firstChild.textContent = 'write ';
   document.getElementById('to').closest('label').hidden = true;
   document.getElementById('beside').closest('label').hidden = false;

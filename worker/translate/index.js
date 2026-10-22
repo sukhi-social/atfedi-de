@@ -13,6 +13,7 @@ import { handleLogin, handleCallback, handleLogout, sessionHandle } from './auth
 import { listDrafts, putDraft, clearDrafts, putSend, getSend, hasAgreed, putAgreed } from './store.js';
 import { contentIndex, contentFile, serveMedia, stageMedia, stagedMedia, MEDIA_TYPES } from '../content/store.js';
 import { sendPage } from '../content/github.js';
+import { isBlogEditor, isPost } from './blog.js';
 
 const LANGS = new Set(['en', 'ja', 'ko']);
 const MAX_INDEX = 2000;
@@ -38,7 +39,13 @@ export async function handleTranslate(request, env, ctx) {
 
   if (path === '/docs.json') {
     const index = await contentIndex(env);
-    const docs = index.docs.map((d) => ({
+    // The blog's posts are a list of their own (write.atfedi.de/blog/), for
+    // BLOG_EDITORS; the ordinary list never has them.
+    const blog = url.searchParams.get('scope') === 'blog';
+    if (blog && !(url.hostname.startsWith('write.') && isBlogEditor(env, await sessionHandle(request, env)))) {
+      return json({ error: 'not found' }, 404);
+    }
+    const docs = index.docs.filter((d) => isPost(d.doc) === blog).map((d) => ({
       doc: d.doc,
       title: d.title,
       lead: d.lead,
@@ -89,7 +96,12 @@ export async function handleTranslate(request, env, ctx) {
 
   if (path === '/api/me') {
     const handle = await sessionHandle(request, env);
-    return json({ handle, cc0: handle ? await hasAgreed(env.FEDI_DB, handle) : false });
+    return json({
+      handle,
+      cc0: handle ? await hasAgreed(env.FEDI_DB, handle) : false,
+      // write only: this account may edit the blog's posts, at /blog/
+      blog: new URL(request.url).hostname.startsWith('write.') && isBlogEditor(env, handle),
+    });
   }
 
   // "What I send is CC0", ticked once beside the Send button.
@@ -161,7 +173,9 @@ export async function handleTranslate(request, env, ctx) {
       return json({ error: 'bad request' }, 400);
     }
     // the same rule atfedi-content's check enforces, so main never breaks
-    if (!/^## \S/.test(text.trimStart())) return json({ error: 'title' }, 400);
+    // (a blog post has a front matter block before it)
+    if (!/^(---\n[\s\S]*?\n---[ \t]*\n\s*)?## \S/.test(text.trimStart())) return json({ error: 'title' }, 400);
+    if (isPost(doc) && !isBlogEditor(env, handle)) return json({ error: 'unknown page' }, 404);
     const index = await contentIndex(env);
     if (!index.docs.some((d) => d.doc === doc)) return json({ error: 'unknown page' }, 404);
 
@@ -201,6 +215,15 @@ export async function handleTranslate(request, env, ctx) {
 
   // everything else: the static desk
   let assetPath = path;
+  // write.atfedi.de/blog/ is the same desk, on the blog's posts: for editors
+  // only, a 404 for everyone else (as if there were no such page)
+  if (path === '/blog' || path === '/blog/') {
+    if (!url.hostname.startsWith('write.') || !isBlogEditor(env, await sessionHandle(request, env))) {
+      return new Response('Not found', { status: 404, headers: { 'x-robots-tag': 'noindex' } });
+    }
+    if (path === '/blog') return Response.redirect(`${url.origin}/blog/`, 301);
+    assetPath = '/';
+  }
   if (!assetPath.endsWith('/') && !/\.[^/]+$/.test(assetPath)) assetPath += '/';
   const res = await env.ASSETS.fetch(new Request(new URL(`/translate${assetPath}`, request.url), request));
   const headers = new Headers(res.headers);

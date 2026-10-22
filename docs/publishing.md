@@ -6,24 +6,43 @@ blog.atfedi.de に記事を出すときの、いつもの道すじ。書く内�
 
 ## 全体図
 
-```
-下書き(.mdoc) → ローカルbuild → ブランチにcommit & push
-    → /v/preview/{branch}/-/{lang}/{slug} で推敲
-    → main にマージ → clean worktree から deploy → 本番確認
-```
+記事は atfedi-de ではなく、**atfedi-content**（`content/posts/{slug}.{lang}.md`）
+にある。他の長文と同じく、write.atfedi.de で人が「送った」版だけがサイトに
+出る（公開ゲート）。blog は deploy のとき、その版を取り込んでビルドする。
 
-プレビューは **GitHub のブランチを直接読む**ので、push するだけで映る。
-デプロイは記事が main に入ってから、最後に一度だけ。
+```
+下書き(.md) → atfedi-content の main（直接 or write から送信）
+    → /v/preview/{ref}/-/{lang}/{slug} で推敲（ブランチ・PR でも）
+    → clean worktree から deploy（取り込み → ビルド → 本番）
+```
 
 ## 1. 下書き
 
-置き場所は言語ごとに一枚ずつ:
+置き場所は、記事ごと・言語ごとに一枚:
 
 ```
-blog/src/content/posts/{ja,en,ko}/{slug}.mdoc
+atfedi-content/content/posts/{slug}.{ja,en,ko}.md
 ```
 
-frontmatter は `title` / `description` / `date` / `author`。原稿でよく踏む穴:
+言語は不揃いでよい（日本語だけの記事もある）。ファイルの形:
+
+```
+---
+description: リンクカードや検索結果に出る短い説明
+summary: （任意）連合に流れる Article の長めの説明
+date: 2026-07-08
+author: shiro_mudita
+lang: ko                  （任意。原文が日本語でないときだけ）
+---
+
+## 題名
+
+本文。節の見出しは ### （他のページと同じく、一段下げて書く）。
+```
+
+題名は他のページと同じ `## 題名` の行。blog のビルドが、題名を front matter に
+戻し、見出しを一段上げて `.mdoc` にする（`blog/scripts/sync-posts.mjs`、
+変換は `shared/posts.mjs`）。原稿でよく踏む穴:
 
 - **一段落は一行で書く**。段落内のハード改行は、CJK では文字間の隙間になる。
 - **CJK の太字は、閉じ `**` の直前を約物にしない**。直前が「。」や「)」で
@@ -33,22 +52,31 @@ frontmatter は `title` / `description` / `date` / `author`。原稿でよく踏
 - en / ko は翻訳ではなく transcreation。長さも構造も違ってよい
   （→ `writing.md`）。
 
+編集は write.atfedi.de/blog/（`BLOG_EDITORS` のアカウントだけ）でもできる。
+題名と front matter も、ファイルの一部として同じ画面で直せる。
+
 ## 2. 手元で確かめる
 
 ```sh
 pnpm --filter blog run build
 ```
 
-これで Markdoc が通るか（frontmatter の欠け・構文の崩れ）まで分かる。
+先に `blog/scripts/sync-posts.mjs` が atfedi-content の main を
+`blog/.content/` に clone してビルドし、送信済みの記事を
+`blog/src/content/posts/` に書き出す（git には入らない）。手元の
+atfedi-content で試すときは `ATFEDI_CONTENT_DIR=/path/to/atfedi-content`。
+そのあとの Markdoc ビルドで、frontmatter の欠け・構文の崩れまで分かる。
 見た目も見たければ `pnpm --filter blog run dev`。
 **CSS や レイアウトを触った場合はここが本番前の唯一の確認場所**
 （後述のとおり、プレビューにはスタイル変更が映らない）。
 
 ## 3. ブランチにして push
 
+atfedi-content で。
+
 ```sh
 git switch -c blog/{slug}
-git add blog/src/content/posts/*/{slug}.mdoc
+git add content/posts/{slug}.*.md
 git commit && git push -u origin blog/{slug}
 ```
 
@@ -64,6 +92,7 @@ https://blog.atfedi.de/v/preview/{branch}/-/{lang}/{slug}
 
 仕組みと、知っておくとよいこと:
 
+- ref は **atfedi-content** のブランチ（か `pr-{n}`）。
 - ページは Worker が **GitHub の raw content をその場で読んで** SSR する。
   ビルドも再デプロイも要らず、push が反映のすべて。
 - ref の解決は 30 秒キャッシュされる。push 直後は最大 30 秒、前の版が
@@ -71,22 +100,21 @@ https://blog.atfedi.de/v/preview/{branch}/-/{lang}/{slug}
 - **CSS / JS はデプロイ済みのものを使う**。スタイルやレイアウトの変更は
   プレビューに映らない（§2 のローカル確認で）。本文の推敲には十分。
 - どのプレビューページも `noindex`。検索には載らない。
-- PR を開いたなら `pr-{number}` も ref に使える。
+- プレビューは送信前の最新の版を映す。サイトに出る版（write で送った版）とは
+  限らない。
 
 推敲はここで済ませる。直しては push、を好きなだけ。ko はできれば
 公開前に一度、ネイティブの目を通す（→ `translation-ko.md` 冒頭の注記）。
 
 ## 5. main にマージ
 
-読み終わって、直すところが無くなったら:
+読み終わって、直すところが無くなったら atfedi-content の main に入れる。
+main への merge で Action が R2 に同期する（約 1 分）。
 
-```sh
-git switch main
-git merge blog/{slug}
-git push
-```
+**サイトに出るのは、人が write で送った版だけ**。AI の下書きや、送ったあとの
+AI の修正は、次に人が送るまで出ない（→ atfedi-content の README）。
 
-マージしただけでは、まだ本番には出ない。
+マージしただけでは、まだ blog には出ない。次の deploy が取り込む。
 
 ## 6. clean worktree からデプロイ
 
@@ -97,6 +125,11 @@ pnpm install --frozen-lockfile
 pnpm run deploy        # 全 workspace build → wrangler deploy
 cd - && git worktree remove /tmp/atfedi-deploy
 ```
+
+deploy のとき blog は、atfedi-content の main から送信済みの記事を取り込む
+（`blog/scripts/sync-posts.mjs`。ネットワークが要る。送信済みの記事が一本も
+無いときは、空の blog を出さないように止まる）。つまり記事の更新は、
+atfedi-content に入ったあとの **次の deploy** で blog に出る。
 
 作業ツリーから直接 deploy しないのは、**そこに居る別の未公開下書きや
 untracked ファイルを巻き込まない**ため。worktree は main のコミットだけを
@@ -130,14 +163,14 @@ done
 - **中身は GitHub から直読み** — `resolveRef` が ref を解決し（ブランチは
   GitHub API `/commits/{ref}`、`pr-{n}` は `/pulls/{n}` の head＝**fork の
   PR でも読める**）、`fetchRaw` が
-  `raw.githubusercontent.com/{owner}/{repo}/{sha}/…` から `.mdoc` を取る。
+  `raw.githubusercontent.com/{owner}/{repo}/{sha}/…` から記事（`content/posts/{slug}.{lang}.md`）を取り、`shared/posts.mjs` で `.mdoc` の形にして描く。
   だから push だけで映る＝**ビルドも再デプロイも要らない**。
 - **レンダリング** — Markdoc の core renderer。`html: false` のまま＝
   **本文の生 HTML はテキストにエスケープされる**（信用しない PR の中身への
   安全策）。コードフェンスは shiki で後段ハイライト（blog.css の
   `--astro-code-*` を共有）、見出し id は github-slugger で blog と同じ。
 - **AI バッジ** — 著者が `ai: true` かを、同じ ref の
-  `blog/src/content/authors/{lang|en}/{id}.mdoc` から読む（`authorIsAi`）。
+  atfedi-de の main の `blog/src/content/authors/{lang|en}/{id}.mdoc` から読む（`authorIsAi`。著者は記事と違い、このリポジトリにある）。
   その ref に著者ファイルが無ければ、badge 無しで本文だけ出る（壊れない）。
 - **CSS の出どころ** — preview の client アセットはビルド時に blog の
   `/_astro/` へマージされる（ルート `package.json` の `postbuild`）。

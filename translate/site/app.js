@@ -14,7 +14,7 @@
 // (the rows), send.js (download, pictures, CC0, send). This file picks the
 // page and the languages and starts it.
 
-import { $, WRITE, el, getJson, getText, local, readHash, s, state, swr, uiLang } from './desk.js';
+import { $, BLOG, WRITE, el, getJson, getText, local, readHash, s, state, swr, uiLang } from './desk.js';
 import { LANGS, LANG_NAMES } from './strings.js';
 import { renderPairs } from './editor.js';
 import { initPicker } from './picker.js';
@@ -27,6 +27,9 @@ function renderWho() {
   if (state.me) {
     who.append(`${s.signedIn} ${state.me}`, el('a', { href: '/logout', textContent: s.logout }));
     $('login').hidden = true;
+    // the blog's posts have their own page, for the accounts that may edit them
+    if (BLOG) who.append(el('a', { href: '/', textContent: '← write' }));
+    else if (WRITE && state.blog) who.append(el('a', { href: '/blog/', textContent: 'blog' }));
   } else {
     $('login').hidden = false;
   }
@@ -70,6 +73,7 @@ async function start() {
   const setWho = (v) => {
     state.me = v?.handle || null;
     state.agreed = !!(state.me && v.cc0);
+    state.blog = !!(state.me && v?.blog);
   };
   let who;
   [who, state.docs] = await Promise.all([
@@ -78,7 +82,7 @@ async function start() {
       renderWho();
       renderPairs();
     }),
-    swr('docs', () => getJson('/docs.json').catch(() => null), (v) => {
+    swr(BLOG ? 'docs:blog' : 'docs', () => getJson(BLOG ? '/docs.json?scope=blog' : '/docs.json').catch(() => null), (v) => {
       state.docs = v;
       document.dispatchEvent(new Event('docs-fresh'));
     }),

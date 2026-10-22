@@ -42,11 +42,13 @@ content path, so a slash in your branch name won't break anything.
 
 ## Previewing a blog post
 
-Posts live at:
+Posts live in the atfedi-content repository, at:
 
 ```
-blog/src/content/posts/{lang}/{slug}.mdoc
+content/posts/{slug}.{lang}.md
 ```
+
+The `{ref}` below is a branch (or PR) of that repository.
 
 Once your branch is pushed — or once your PR is open — you can see the post
 rendered before it's built into the site. Two URL shapes work:

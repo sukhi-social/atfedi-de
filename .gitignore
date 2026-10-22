@@ -3,3 +3,7 @@ dist/
 .astro/
 .wrangler/
 .DS_Store
+
+# the blog's posts are generated from atfedi-content (blog/scripts/sync-posts.mjs)
+blog/src/content/posts/
+blog/.content/
