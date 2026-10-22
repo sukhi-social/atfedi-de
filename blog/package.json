@@ -4,10 +4,11 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
+    "sync": "node scripts/sync-posts.mjs",
+    "dev": "node scripts/sync-posts.mjs && astro dev",
+    "build": "node scripts/sync-posts.mjs && astro build",
     "preview": "astro preview",
-    "check": "astro check"
+    "check": "node scripts/sync-posts.mjs && astro check"
   },
   "dependencies": {
     "@astrojs/markdoc": "^2.1.0",

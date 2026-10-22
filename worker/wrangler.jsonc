@@ -33,14 +33,12 @@
   // (comma-separated handles). Anyone else's "Send" opens a pull request.
   // The desk commits with the secret CONTENT_GITHUB_TOKEN: a fine-grained
   // token for atfedi-content only, with Contents and Pull requests write.
-  // BLOG_EDITORS: who sees write.atfedi.de/blog/ and may open pull requests
-  // against BLOG_REPO (the blog's posts live there). The same token must also
-  // reach that repo, with Contents and Pull requests write.
+  // BLOG_EDITORS: who sees write.atfedi.de/blog/ and may send the blog's
+  // posts, which are pages in atfedi-content like the rest (posts/<slug>).
   "vars": {
     "SUKHI_BASE_URL": "https://sukhi.f3liz.casa",
     "CONTENT_REPO": "sukhi-social/atfedi-content",
     "WRITE_PUBLISHERS": "@kuro_admin@sukhi.f3liz.casa",
-    "BLOG_REPO": "sukhi-social/atfedi-de",
     "BLOG_EDITORS": "@kuro_admin@sukhi.f3liz.casa"
   },
   // kiosk's newsstand sweep — a gentle tick that gathers a few hackers.pub

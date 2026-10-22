@@ -6,15 +6,16 @@
 // The hidden <select id="doc"> stays the one place the chosen page lives;
 // choosing here sets it and fires its change event, as picking from it did.
 
-import { $, WRITE, el, local, s, state, uiLang } from './desk.js';
+import { $, BLOG, WRITE, el, local, s, state, uiLang } from './desk.js';
 import { LANGS, LANG_NAMES } from './strings.js';
 
 const p = s.picker;
-const KIND_ORDER = ['basics', 'site', 'tool'];
+const KIND_ORDER = BLOG ? ['post'] : ['basics', 'site', 'tool'];
 const LANG_SHORT = { ja: '日', ko: '한', en: 'En' };
 
 // what a page is: the section its path starts with
-const kindOf = (doc) => (doc.startsWith('basics/') ? 'basics' : doc.startsWith('tool-pages/') ? 'tool' : 'site');
+const kindOf = (doc) =>
+  doc.startsWith('basics/') ? 'basics' : doc.startsWith('tool-pages/') ? 'tool' : doc.startsWith('posts/') ? 'post' : 'site';
 
 // a page's worst state across its languages: waiting on a person, changed
 // since a person sent it, or published as it is
@@ -140,7 +141,7 @@ export function initPicker() {
   }
 
   function counts() {
-    const n = { all: state.docs.length, basics: 0, site: 0, tool: 0 };
+    const n = { all: state.docs.length, basics: 0, site: 0, tool: 0, post: 0 };
     for (const d of state.docs) n[kindOf(d.doc)]++;
     return n;
   }

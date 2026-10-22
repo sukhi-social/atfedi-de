@@ -13,15 +13,20 @@
 // markdown-it's `html: false`, so raw HTML in a post is escaped to text —
 // a PR's contents are not trusted.
 
+import { toMdoc } from '@atfedi/shared/posts';
 import Markdoc, { type RenderableTreeNode, type NodeType, type Schema } from '@markdoc/markdoc';
 import GithubSlugger from 'github-slugger';
 import { createHighlighterCore, createCssVariablesTheme, type HighlighterCore } from '@shikijs/core';
 import { createJavaScriptRegexEngine } from '@shikijs/engine-javascript';
 
-// The catalog repo. A PR may live in a fork — resolveRef returns the head.
-const REPO = { owner: 'f3liz-casa', repo: 'atfedi-de' };
-// Posts sit here; a content path is {lang}/{slug} under it, like the URL.
-const POSTS_BASE = 'blog/src/content/posts';
+// The posts live in atfedi-content, where the write desk sends them. A PR may
+// live in a fork — resolveRef returns the head.
+const REPO = { owner: 'sukhi-social', repo: 'atfedi-content' };
+// A post is content/posts/{slug}.{lang}.md; shared/posts.mjs turns it into the
+// .mdoc the blog builds from.
+const POSTS_BASE = 'content/posts';
+// The writers' profiles stay in the site's repo (and aren't part of a ref).
+const SITE = { owner: 'f3liz-casa', repo: 'atfedi-de', sha: 'main', label: 'main' };
 const LOCALES = ['en', 'ja', 'ko'];
 const DEFAULT_LOCALE = 'en';
 
@@ -86,7 +91,18 @@ function parseFrontmatter(text: string): Record<string, string> {
   const out: Record<string, string> = {};
   for (const line of text.split('\n')) {
     const m = line.match(/^([\w-]+):\s*(.*)$/);
-    if (m) out[m[1]] = m[2].trim().replace(/^["']|["']$/g, '');
+    if (!m) continue;
+    const v = m[2].trim();
+    // toMdoc writes titles as JSON strings; the other values are plain
+    if (v.startsWith('"')) {
+      try {
+        out[m[1]] = JSON.parse(v);
+        continue;
+      } catch {
+        // not JSON after all: fall through
+      }
+    }
+    out[m[1]] = v.replace(/^["']|["']$/g, '');
   }
   return out;
 }
@@ -148,7 +164,7 @@ async function fetchRaw(src: Source, repoPath: string): Promise<string | null> {
   return r.text();
 }
 
-// The post slugs in posts/{lang}/ at a ref. [] if the folder is absent;
+// The post slugs written in a language at a ref. [] if the folder is absent;
 // null on any other failure (so the home can tell "empty" from "broken").
 async function listSlugs(
   src: Source,
@@ -156,7 +172,7 @@ async function listSlugs(
   token?: string,
 ): Promise<string[] | null> {
   const r = await fetch(
-    `https://api.github.com/repos/${src.owner}/${src.repo}/contents/${POSTS_BASE}/${lang}?ref=${src.sha}`,
+    `https://api.github.com/repos/${src.owner}/${src.repo}/contents/${POSTS_BASE}?ref=${src.sha}`,
     {
       headers: ghHeaders(token),
       cf: { cacheTtl: 86400, cacheEverything: true },
@@ -166,13 +182,14 @@ async function listSlugs(
   if (!r.ok) return null;
   const data: any = await r.json();
   if (!Array.isArray(data)) return [];
+  const suffix = `.${lang}.md`;
   return data
-    .filter((e) => e.type === 'file' && e.name.endsWith('.mdoc'))
-    .map((e) => e.name.slice(0, -'.mdoc'.length));
+    .filter((e) => e.type === 'file' && e.name.endsWith(suffix))
+    .map((e) => e.name.slice(0, -suffix.length));
 }
 
-// Whether a post's author is flagged ai: true — the author entry lives in
-// the same ref, with English as the fallback locale (like the blog itself).
+// Whether a post's author is flagged ai: true — the author entry lives in the
+// site's repo, with English as the fallback locale (like the blog itself).
 async function authorIsAi(src: Source, lang: string, id: string): Promise<boolean> {
   if (!/^[\w-]+$/.test(id)) return false;
   for (const l of [lang, 'en']) {
@@ -328,7 +345,7 @@ export async function loadPreview(
     };
   }
 
-  // a locale home — list the posts in posts/{lang}/
+  // a locale home — list the posts written in that language
   if (slug === '') {
     if (!LOCALES.includes(lang)) {
       return { kind: 'error', status: 404, message: `Unknown locale "${lang}".`, ref };
@@ -346,9 +363,14 @@ export async function loadPreview(
     const posts = (
       await Promise.all(
         slugs.map(async (s): Promise<PostMeta | null> => {
-          const raw = await fetchRaw(src!, `${POSTS_BASE}/${lang}/${s}.mdoc`);
-          if (raw === null) return null;
-          const fm = frontmatterOf(raw);
+          const md = await fetchRaw(src!, `${POSTS_BASE}/${s}.${lang}.md`);
+          if (md === null) return null;
+          let fm: Record<string, string>;
+          try {
+            fm = frontmatterOf(toMdoc(md));
+          } catch {
+            return { slug: s, title: s, date: '' };
+          }
           return { slug: s, title: fm.title || s, date: fm.date || '' };
         }),
       )
@@ -358,13 +380,13 @@ export async function loadPreview(
   }
 
   // a single post
-  const raw = await fetchRaw(src, `${POSTS_BASE}/${lang}/${slug}.mdoc`);
-  if (raw === null) {
+  const md = await fetchRaw(src, `${POSTS_BASE}/${slug}.${lang}.md`);
+  if (md === null) {
     return {
       kind: 'error',
       status: 404,
       message: 'No post at that path on this ref.',
-      detail: `${POSTS_BASE}/${lang}/${slug}.mdoc`,
+      detail: `${POSTS_BASE}/${slug}.${lang}.md`,
       ref,
       lang,
       slug,
@@ -372,7 +394,7 @@ export async function loadPreview(
   }
 
   try {
-    const ast = Markdoc.parse(raw);
+    const ast = Markdoc.parse(toMdoc(md));
     const fm = parseFrontmatter((ast.attributes.frontmatter as string) || '');
     // default config plus heading ids; no custom tags, raw HTML escaped
     const headings: PreviewHeading[] = [];
@@ -380,7 +402,7 @@ export async function loadPreview(
       nodes: { heading: headingNodeFor(new GithubSlugger(), headings) },
     });
     const html = await highlightFences(Markdoc.renderers.html(transformed));
-    const ai = fm.author ? await authorIsAi(src, lang, fm.author) : false;
+    const ai = fm.author ? await authorIsAi(SITE, lang, fm.author) : false;
     return {
       kind: 'post',
       ref,

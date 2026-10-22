@@ -1,5 +1,9 @@
 {
   "name": "@atfedi/shared",
   "version": "0.0.0",
-  "private": true
+  "private": true,
+  "exports": {
+    "./posts": "./posts.mjs",
+    "./styles/*": "./styles/*"
+  }
 }

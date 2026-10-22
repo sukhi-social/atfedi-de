@@ -403,7 +403,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 .cat.on .n, .cat.on .n b { color: var(--ink); font-weight: 700; }
 .cat:hover .n { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line); }
 .cat i { display: inline-block; width: 0.6rem; height: 0.6rem; margin-right: 0.45rem; border-radius: 3px; border: 1.5px solid; box-sizing: border-box; }
-.c-basics { --kind: #2f6d5a; } .c-site { --kind: #a85a29; } .c-tool { --kind: #5b6fa8; }
+.c-basics { --kind: #2f6d5a; } .c-site { --kind: #a85a29; } .c-tool { --kind: #5b6fa8; } .c-post { --kind: #8a5a8f; }
 .cat i { border-color: var(--kind); }
 .cat.on i { background: var(--kind); }
 
