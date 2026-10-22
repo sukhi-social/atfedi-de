@@ -55,6 +55,31 @@
   margin-top: 0;
 }
 
+/* the hero's long Latin words (ActivityPub in a Japanese title) must not be
+ * split mid-word on a phone; step the title down a little instead */
+@media (max-width: 30rem) {
+  .tool-page .hero h1 {
+    font-size: calc(1.625rem * var(--type-scale));
+  }
+}
+
+/* lane doors inside a page (the draft page's write / translate): the
+ * section rules above would otherwise push every heading and paragraph in
+ * the card away from its edges, and the cards sit right under the text */
+.tool-page .doors {
+  margin-top: var(--space-8);
+}
+
+.tool-page .lane-door h3,
+.tool-page .lane-door p {
+  margin: 0;
+}
+
+.tool-page .lane-door h3 {
+  font-size: var(--text-lg);
+  letter-spacing: 0;
+}
+
 /* icon rows: the lucide svg takes the bullet's place */
 .tool-page ul {
   list-style: none;
